@@ -1,7 +1,8 @@
 import { createDatabaseClient } from "@shelf/database";
 import type { ExtendedPrismaClient } from "@shelf/database";
 
-import { NODE_ENV } from "../utils/env";
+import { databaseUrlForRuntime } from "./database-url.server";
+import { DATABASE_URL, NODE_ENV } from "../utils/env";
 
 export type { ExtendedPrismaClient };
 
@@ -17,7 +18,9 @@ declare global {
 // create a new connection to the DB with every change either.
 // in production, we'll have a single connection to the DB.
 if (NODE_ENV === "production") {
-  db = createDatabaseClient();
+  db = createDatabaseClient(
+    databaseUrlForRuntime(DATABASE_URL, Boolean(process.env.VERCEL))
+  );
 } else {
   if (!global.__db__) {
     global.__db__ = createDatabaseClient();

@@ -1,6 +1,5 @@
 import { createMiddleware } from "hono/factory";
 import { pathToRegexp } from "path-to-regexp";
-import { getSession } from "remix-hono/session";
 
 import {
   refreshAccessToken,
@@ -13,6 +12,7 @@ import { isQrId } from "~/utils/id";
 import { Logger } from "~/utils/logger";
 import type { FlashData, SessionData } from "./session";
 import { authSessionKey } from "./session";
+import { getSession } from "./session-middleware";
 
 /**
  * Ensure host headers for React Router CSRF protection

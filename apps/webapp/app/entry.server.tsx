@@ -3,6 +3,7 @@ import { PassThrough } from "stream";
 
 import { createReadableStreamFromReadable } from "@react-router/node";
 import * as Sentry from "@sentry/react-router";
+import { handleRequest as handleVercelRequest } from "@vercel/react-router/entry.server";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 import { ServerRouter } from "react-router";
@@ -18,82 +19,87 @@ import * as schedulerService from "./utils/scheduler.server";
 export * from "../server";
 
 // === start: register scheduler and workers ===
-schedulerService
-  .init()
-  .then(() =>
-    Promise.all([
-      registerBookingWorkers()
-        .then(() => console.log("Booking workers registered"))
-        .catch((cause) => {
-          Logger.error(
-            new ShelfError({
-              cause,
-              message:
-                "Something went wrong while registering booking workers.",
-              label: "Scheduler",
-            })
-          );
-        }),
-      regierAssetWorkers()
-        .then(() => console.log("Asset workers registered"))
-        .catch((cause) => {
-          Logger.error(
-            new ShelfError({
-              cause,
-              message: "Something went wrong while registering asset workers.",
-              label: "Scheduler",
-            })
-          );
-        }),
-      registerEmailWorkers()
-        .then(() => console.log("Email workers registered"))
-        .catch((cause) => {
-          Logger.error(
-            new ShelfError({
-              cause,
-              message: "Something went wrong while registering email workers.",
-              label: "Scheduler",
-            })
-          );
-        }),
-      registerAuditWorkers()
-        .then(() => console.log("Audit workers registered"))
-        .catch((cause) => {
-          Logger.error(
-            new ShelfError({
-              cause,
-              message: "Something went wrong while registering audit workers.",
-              label: "Scheduler",
-            })
-          );
-        }),
-      registerAddonTrialWorkers()
-        .then(() => console.log("Addon trial workers registered"))
-        .catch((cause) => {
-          Logger.error(
-            new ShelfError({
-              cause,
-              message:
-                "Something went wrong while registering addon trial workers.",
-              label: "Scheduler",
-            })
-          );
-        }),
-    ])
-  )
-  .finally(() => {
-    // eslint-disable-next-line no-console
-    console.log("Scheduler and workers registration completed");
-  })
-  .catch((cause) => {
-    Logger.error(
-      new ShelfError({
-        cause,
-        message: "Scheduler crash",
-        label: "Scheduler",
-      })
-    );
-  });
+if (!process.env.VERCEL) {
+  schedulerService
+    .init()
+    .then(() =>
+      Promise.all([
+        registerBookingWorkers()
+          .then(() => console.log("Booking workers registered"))
+          .catch((cause) => {
+            Logger.error(
+              new ShelfError({
+                cause,
+                message:
+                  "Something went wrong while registering booking workers.",
+                label: "Scheduler",
+              })
+            );
+          }),
+        regierAssetWorkers()
+          .then(() => console.log("Asset workers registered"))
+          .catch((cause) => {
+            Logger.error(
+              new ShelfError({
+                cause,
+                message:
+                  "Something went wrong while registering asset workers.",
+                label: "Scheduler",
+              })
+            );
+          }),
+        registerEmailWorkers()
+          .then(() => console.log("Email workers registered"))
+          .catch((cause) => {
+            Logger.error(
+              new ShelfError({
+                cause,
+                message:
+                  "Something went wrong while registering email workers.",
+                label: "Scheduler",
+              })
+            );
+          }),
+        registerAuditWorkers()
+          .then(() => console.log("Audit workers registered"))
+          .catch((cause) => {
+            Logger.error(
+              new ShelfError({
+                cause,
+                message:
+                  "Something went wrong while registering audit workers.",
+                label: "Scheduler",
+              })
+            );
+          }),
+        registerAddonTrialWorkers()
+          .then(() => console.log("Addon trial workers registered"))
+          .catch((cause) => {
+            Logger.error(
+              new ShelfError({
+                cause,
+                message:
+                  "Something went wrong while registering addon trial workers.",
+                label: "Scheduler",
+              })
+            );
+          }),
+      ])
+    )
+    .finally(() => {
+      // eslint-disable-next-line no-console
+      console.log("Scheduler and workers registration completed");
+    })
+    .catch((cause) => {
+      Logger.error(
+        new ShelfError({
+          cause,
+          message: "Scheduler crash",
+          label: "Scheduler",
+        })
+      );
+    });
+}
 // === end: register scheduler and workers ===
 
 /**
@@ -228,5 +234,11 @@ function handleBrowserRequest(
   });
 }
 
+// Vercel supplies a function-aware streaming implementation. The long-lived
+// Node server keeps the existing renderer used by Fly/Docker deployments.
+const platformHandleRequest = process.env.VERCEL
+  ? handleVercelRequest
+  : handleRequest;
+
 // Wrap with Sentry so server errors/transactions are reported.
-export default Sentry.wrapSentryHandleRequest(handleRequest);
+export default Sentry.wrapSentryHandleRequest(platformHandleRequest);
