@@ -17,21 +17,30 @@
  */
 
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
-import type { ActionFunctionArgs, MetaFunction } from "react-router";
+import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
+} from "react-router";
 import { data, useFetcher } from "react-router";
 import { z } from "zod";
 import { Button } from "~/components/shared/button";
 import { Spinner } from "~/components/shared/spinner";
 import { config } from "~/config/shelf.config";
+import { createI18n } from "~/i18n/i18n";
+import { reconcileLanguageWithSupabase } from "~/i18n/language-sync.server";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { supabaseClient } from "~/integrations/supabase/client";
+import { localizeAuthError } from "~/modules/auth/localize-error.server";
 import { createMobileAuthCode } from "~/modules/auth/mobile-sso.server";
 import { refreshAccessToken } from "~/modules/auth/service.server";
 import { appendToMetaTitle } from "~/utils/append-to-meta-title";
 import { createSSOFormData } from "~/utils/auth";
 import { detectFormatPrefsForPersistence } from "~/utils/client-hints";
 import { mobilePkceChallengeCookie } from "~/utils/cookies.server";
-import { makeShelfError, notAllowedMethod, ShelfError } from "~/utils/error";
+import { notAllowedMethod, ShelfError } from "~/utils/error";
 import {
   getActionMethod,
   logException,
@@ -49,32 +58,34 @@ const MOBILE_CALLBACK_URL = "shelf://auth-callback";
  * from the URL fragment and posts the refresh token + SAML claims. We re-derive
  * the session server-side and never trust the client-supplied tokens.
  */
-const MobileCallbackSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  groups: z
-    .union([
-      z.string().transform((str) => {
-        try {
-          const parsed = JSON.parse(str);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      }),
-      z.array(z.string()),
-    ])
-    .default([]),
-  refreshToken: z.string().min(1),
-  // `createSSOFormData` always includes a redirectTo; it is unused on mobile.
-  redirectTo: z.string().optional(),
-  phone: z.string().optional(),
-  streetAddress: z.string().optional(),
-  city: z.string().optional(),
-  stateProvince: z.string().optional(),
-  postalCode: z.string().optional(),
-  country: z.string().optional(),
-});
+function createMobileCallbackSchema(t: (key: string) => string) {
+  return z.object({
+    firstName: z.string().min(1, t("auth:firstNameRequired")),
+    lastName: z.string().min(1, t("auth:lastNameRequired")),
+    groups: z
+      .union([
+        z.string().transform((str) => {
+          try {
+            const parsed = JSON.parse(str);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        }),
+        z.array(z.string()),
+      ])
+      .default([]),
+    refreshToken: z.string().min(1),
+    // `createSSOFormData` always includes a redirectTo; it is unused on mobile.
+    redirectTo: z.string().optional(),
+    phone: z.string().optional(),
+    streetAddress: z.string().optional(),
+    city: z.string().optional(),
+    stateProvince: z.string().optional(),
+    postalCode: z.string().optional(),
+    country: z.string().optional(),
+  });
+}
 
 export async function action({ request }: ActionFunctionArgs) {
   const { disableSSO } = config;
@@ -84,13 +95,14 @@ export async function action({ request }: ActionFunctionArgs) {
   const clearChallengeCookie = await mobilePkceChallengeCookie.serialize("", {
     maxAge: 0,
   });
+  const language = await resolveRequestLanguage({ request });
+  const i18n = createI18n(language);
   try {
     if (disableSSO) {
       throw new ShelfError({
         cause: null,
-        title: "SSO is disabled",
-        message:
-          "For more information, please contact your workspace administrator.",
+        title: i18n.t("auth:ssoDisabled"),
+        message: i18n.t("auth:contactWorkspaceAdmin"),
         label: "User onboarding",
         status: 403,
         shouldBeCaptured: false,
@@ -115,7 +127,10 @@ export async function action({ request }: ActionFunctionArgs) {
           stateProvince,
           postalCode,
           country,
-        } = parseData(await readFormData(request), MobileCallbackSchema);
+        } = parseData(
+          await readFormData(request),
+          createMobileCallbackSchema((key) => i18n.t(key))
+        );
 
         // Don't trust client tokens — re-derive the session from the refresh
         // token server-side (same trust boundary as the web callback).
@@ -138,14 +153,16 @@ export async function action({ request }: ActionFunctionArgs) {
         // detectFormatPrefsForPersistence), so the lazy backfill fills the real
         // zone later rather than sticking on the "UTC" fallback.
         const formatPrefs = detectFormatPrefsForPersistence(request);
-        await resolveUserAndOrgForSsoCallback({
+        const { user } = await resolveUserAndOrgForSsoCallback({
           authSession,
           firstName,
           lastName,
           groups,
           contactInfo,
           formatPrefs,
+          language,
         });
+        await reconcileLanguageWithSupabase(authSession.userId, user.language);
 
         // PKCE: `/sso-login` stashes the S256 challenge in a short-lived cookie
         // at the start of the flow. Bind it to the auth code so the exchange
@@ -176,7 +193,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
     throw notAllowedMethod(method);
   } catch (cause) {
-    const reason = makeShelfError(cause);
+    const reason = localizeAuthError(cause, (key) => i18n.t(key));
     // why: the client renders `result.error` and never re-throws, so without an
     // explicit log a genuine 5xx (refresh-token exchange, user/org provisioning,
     // or code mint failing) would never reach Sentry. `logException` mirrors
@@ -192,9 +209,10 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 }
 
-export function loader() {
-  const title = "Signing you in";
-  const subHeading = "Please wait while we connect your account";
+export async function loader({ request }: LoaderFunctionArgs) {
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
+  const title = i18n.t("auth:signingYouIn");
+  const subHeading = i18n.t("auth:connectingAccount");
 
   return data(payload({ title, subHeading }));
 }
@@ -204,6 +222,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 ];
 
 export default function MobileLoginCallback() {
+  const { t } = useTranslation();
   const fetcher = useFetcher<typeof action>();
   const result = fetcher.data;
 
@@ -245,7 +264,7 @@ export default function MobileLoginCallback() {
         <div>
           <div className="text-sm text-error-500">{errorMessage}</div>
           <Button to="/" className="mt-4">
-            Back to login
+            {t("auth:backToLogin")}
           </Button>
         </div>
       ) : (

@@ -23,6 +23,7 @@
 
 import { useCallback, useState } from "react";
 import { DateTime } from "luxon";
+import { useTranslation } from "react-i18next";
 
 import { DateRangePicker } from "~/components/shared/date-range-picker";
 import type { DateRangeValue } from "~/components/shared/date-range-picker";
@@ -54,16 +55,17 @@ export interface TimeframePickerProps {
 }
 
 /** Preset button configuration */
-const PRESETS: { id: TimeframePreset; label: string; shortLabel: string }[] = [
-  { id: "today", label: "Today", shortLabel: "Today" },
-  { id: "last_7d", label: "Last 7 days", shortLabel: "7d" },
-  { id: "last_30d", label: "Last 30 days", shortLabel: "30d" },
-  { id: "last_90d", label: "Last 90 days", shortLabel: "90d" },
-  { id: "this_month", label: "This month", shortLabel: "Month" },
-  { id: "this_quarter", label: "This quarter", shortLabel: "Qtr" },
-  { id: "this_year", label: "This year", shortLabel: "Year" },
-  { id: "all_time", label: "All time", shortLabel: "All" },
-];
+const PRESETS: { id: TimeframePreset; labelKey: string; shortLabel: string }[] =
+  [
+    { id: "today", labelKey: "today", shortLabel: "Today" },
+    { id: "last_7d", labelKey: "last7Days", shortLabel: "7d" },
+    { id: "last_30d", labelKey: "last30Days", shortLabel: "30d" },
+    { id: "last_90d", labelKey: "last90Days", shortLabel: "90d" },
+    { id: "this_month", labelKey: "thisMonth", shortLabel: "Month" },
+    { id: "this_quarter", labelKey: "thisQuarter", shortLabel: "Qtr" },
+    { id: "this_year", labelKey: "thisYear", shortLabel: "Year" },
+    { id: "all_time", labelKey: "allTime", shortLabel: "All" },
+  ];
 
 const EMPTY_EXCLUDE_PRESETS: TimeframePreset[] = [];
 
@@ -103,6 +105,7 @@ export function TimeframePicker({
   disabled = false,
   className,
 }: TimeframePickerProps) {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { prefs } = useDateFormatter();
 
@@ -196,7 +199,9 @@ export function TimeframePicker({
             )}
             aria-pressed={value.preset === preset.id}
           >
-            <span className="hidden sm:inline">{preset.label}</span>
+            <span className="hidden sm:inline">
+              {t(`reports:${preset.labelKey}`)}
+            </span>
             <span className="sm:hidden">{preset.shortLabel}</span>
           </button>
         ))}

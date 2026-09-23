@@ -7,26 +7,42 @@
  *
  * @see {@link file://./timezone-select.tsx}
  */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { I18nextProvider } from "react-i18next";
 import { describe, it, expect, vi } from "vitest";
+import { createI18n } from "~/i18n/i18n";
 import { TIMEZONE_OPTIONS, TimezoneSelect } from "./timezone-select";
 
 describe("TimezoneSelect", () => {
+  function renderWithLanguage(language: "en" | "es") {
+    return render(
+      <I18nextProvider i18n={createI18n(language)}>
+        <TimezoneSelect
+          name="timeZone"
+          value="Europe/London"
+          // why: this test checks rendered localization; selecting a value is outside its scope
+          onChange={vi.fn()}
+        />
+      </I18nextProvider>
+    );
+  }
+
   it("exposes a non-empty option list", () => {
     expect(TIMEZONE_OPTIONS.length).toBeGreaterThan(0);
     expect(TIMEZONE_OPTIONS).toContain("UTC");
   });
 
   it("renders the current value in the trigger", () => {
-    render(
-      <TimezoneSelect
-        name="timeZone"
-        value="Europe/London"
-        // why: these tests verify render + hidden-input submission only; onChange is stubbed, not exercised
-        onChange={vi.fn()}
-      />
-    );
+    renderWithLanguage("en");
     expect(screen.getByText("Europe/London")).toBeTruthy();
+  });
+
+  it("uses Spanish labels when Spanish is active", () => {
+    renderWithLanguage("es");
+    fireEvent.click(screen.getByRole("button"));
+    expect(
+      screen.getByRole("combobox", { name: "Buscar zona horaria" })
+    ).toBeTruthy();
   });
 
   it("submits the current value via a hidden input", () => {

@@ -1,13 +1,19 @@
 import type { ActionFunctionArgs } from "react-router";
 import { data, redirect } from "react-router";
 
-import { SendOtpSchema } from "~/modules/auth/components/continue-with-email-form";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
+import { createSendOtpSchema } from "~/modules/auth/components/continue-with-email-form";
+import { localizeAuthError } from "~/modules/auth/localize-error.server";
 import { sendOTP } from "~/modules/auth/service.server";
 import { makeShelfError, notAllowedMethod } from "~/utils/error";
 import { error, getActionMethod, parseData } from "~/utils/http.server";
 import { validateNonSSOSignup } from "~/utils/sso.server";
 
 export async function action({ request }: ActionFunctionArgs) {
+  const language = await resolveRequestLanguage({ request });
+  const i18n = createI18n(language);
+
   try {
     const method = getActionMethod(request);
 
@@ -15,7 +21,7 @@ export async function action({ request }: ActionFunctionArgs) {
       case "POST": {
         const { email, mode } = parseData(
           await request.formData(),
-          SendOtpSchema,
+          createSendOtpSchema((key) => i18n.t(key)),
           { shouldBeCaptured: false }
         );
 
@@ -24,7 +30,7 @@ export async function action({ request }: ActionFunctionArgs) {
           await validateNonSSOSignup(email);
         }
 
-        await sendOTP(email);
+        await sendOTP(email, language);
 
         return redirect(`/otp?email=${encodeURIComponent(email)}&mode=${mode}`);
       }
@@ -33,6 +39,7 @@ export async function action({ request }: ActionFunctionArgs) {
     throw notAllowedMethod(method);
   } catch (cause) {
     const reason = makeShelfError(cause);
-    return data(error(reason), { status: reason.status });
+    const localizedReason = localizeAuthError(reason, (key) => i18n.t(key));
+    return data(error(localizedReason), { status: localizedReason.status });
   }
 }

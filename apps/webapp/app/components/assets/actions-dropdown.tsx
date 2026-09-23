@@ -6,6 +6,7 @@ import {
   PopoverTrigger,
 } from "@radix-ui/react-popover";
 import { AlarmClockIcon, ArrowUpDownIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useLoaderData } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
 import { ChevronRight } from "~/components/icons/library";
@@ -34,6 +35,7 @@ import When from "../when/when";
 
 // react-doctor:no-giant-component — deferred for follow-up refactor
 const ConditionalActionsDropdown = () => {
+  const { t } = useTranslation();
   const { asset } = useLoaderData<typeof loader>();
   const [isRelinkQrDialogOpen, setIsRelinkQrDialogOpen] = useState(false);
   const [isSetReminderDialogOpen, setIsSetReminderDialogOpen] = useState(false);
@@ -97,7 +99,7 @@ const ConditionalActionsDropdown = () => {
             className="asset-actions hidden sm:flex"
           >
             <span className="flex items-center gap-2">
-              Actions <ChevronRight className="chev" />
+              {t("inventory:actions")} <ChevronRight className="chev" />
             </span>
           </Button>
         </PopoverTrigger>
@@ -111,7 +113,7 @@ const ConditionalActionsDropdown = () => {
           onClick={() => setOpen(true)}
         >
           <span className="flex items-center gap-2">
-            Actions <ChevronRight className="chev" />
+            {t("inventory:actions")} <ChevronRight className="chev" />
           </span>
         </Button>
 
@@ -152,7 +154,8 @@ const ConditionalActionsDropdown = () => {
                     }}
                   >
                     <span className="flex items-center gap-2">
-                      <ArrowUpDownIcon className="size-5" /> Adjust quantity
+                      <ArrowUpDownIcon className="size-5" />{" "}
+                      {t("inventory:adjustQuantity")}
                     </span>
                   </Button>
                 </div>
@@ -179,8 +182,7 @@ const ConditionalActionsDropdown = () => {
                         custodyActionDisabled ||
                         (noneAvailable
                           ? {
-                              reason:
-                                "All units are currently in custody. Release some before assigning more.",
+                              reason: t("inventory:allUnitsInCustody"),
                             }
                           : false)
                       }
@@ -191,7 +193,9 @@ const ConditionalActionsDropdown = () => {
                     >
                       <span className="flex items-center gap-2">
                         <Icon icon="assign-custody" />{" "}
-                        {isSelfService ? "Take" : "Assign"} custody
+                        {isSelfService
+                          ? t("inventory:takeCustody")
+                          : t("inventory:assignCustody")}
                       </span>
                     </Button>
                   ) : assetCanBeReleased ? (
@@ -209,7 +213,8 @@ const ConditionalActionsDropdown = () => {
                       }
                     >
                       <span className="flex items-center gap-1">
-                        <Icon icon="release-custody" /> Release custody
+                        <Icon icon="release-custody" />{" "}
+                        {t("inventory:releaseCustody")}
                       </span>
                     </Button>
                   ) : (
@@ -224,7 +229,9 @@ const ConditionalActionsDropdown = () => {
                     >
                       <span className="flex items-center gap-2">
                         <Icon icon="assign-custody" />{" "}
-                        {isSelfService ? "Take" : "Assign"} custody
+                        {isSelfService
+                          ? t("inventory:takeCustody")
+                          : t("inventory:assignCustody")}
                       </span>
                     </Button>
                   )}
@@ -281,7 +288,9 @@ const ConditionalActionsDropdown = () => {
                   >
                     <span className="flex items-center gap-2">
                       <Icon icon="location" />{" "}
-                      {isQtyTracked ? "Manage placements" : "Update location"}
+                      {isQtyTracked
+                        ? t("inventory:managePlacements")
+                        : t("inventory:updateLocation")}
                     </span>
                   </Button>
                 </div>
@@ -306,7 +315,7 @@ const ConditionalActionsDropdown = () => {
                   >
                     <span className="flex items-center gap-2">
                       <Icon icon="barcode" />
-                      Relink QR Code
+                      {t("inventory:relinkQrCode")}
                     </span>
                   </Button>
                 </div>
@@ -325,7 +334,7 @@ const ConditionalActionsDropdown = () => {
                     >
                       <span className="flex items-center gap-2">
                         <AlarmClockIcon className="size-5" />
-                        Set reminder
+                        {t("inventory:setReminder")}
                       </span>
                     </Button>
                   </div>
@@ -339,7 +348,7 @@ const ConditionalActionsDropdown = () => {
                     width="full"
                   >
                     <span className="flex items-center gap-2">
-                      <Icon icon="pen" /> Edit
+                      <Icon icon="pen" /> {t("inventory:edit")}
                     </span>
                   </Button>
                 </div>
@@ -353,7 +362,7 @@ const ConditionalActionsDropdown = () => {
                     onClick={handleMenuClose}
                   >
                     <span className="flex items-center gap-2">
-                      <Icon icon="duplicate" /> Duplicate
+                      <Icon icon="duplicate" /> {t("inventory:duplicate")}
                     </span>
                   </Button>
                 </div>
@@ -377,7 +386,7 @@ const ConditionalActionsDropdown = () => {
                           assetIsCheckedOut || assetIsPartOfUnavailableKit
                         }
                       >
-                        Delete
+                        {t("inventory:delete")}
                       </Button>
                     }
                   />
@@ -396,14 +405,12 @@ const ConditionalActionsDropdown = () => {
                 </div>
                 {assetIsCheckedOut ? (
                   <div className=" border-t p-2 text-left text-xs">
-                    Some actions are disabled due to the asset being checked
-                    out.
+                    {t("inventory:actionsDisabledCheckedOut")}
                   </div>
                 ) : null}
                 {assetIsPartOfUnavailableKit ? (
                   <div className=" border-t p-2 text-left text-xs">
-                    Some actions are disabled due to the asset being part of a
-                    kit.
+                    {t("inventory:actionsDisabledInKit")}
                   </div>
                 ) : null}
               </When>
@@ -467,13 +474,14 @@ const ConditionalActionsDropdown = () => {
 };
 
 const ActionsDropdown = () => {
+  const { t } = useTranslation();
   const isHydrated = useHydrated();
 
   if (!isHydrated)
     return (
       <Button variant="secondary" to="#" data-test-id="assetActionsButton">
         <span className="flex items-center gap-2">
-          Actions <ChevronRight className="chev rotate-90" />
+          {t("inventory:actions")} <ChevronRight className="chev rotate-90" />
         </span>
       </Button>
     );

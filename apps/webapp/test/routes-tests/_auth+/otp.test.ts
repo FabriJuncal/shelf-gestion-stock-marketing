@@ -10,6 +10,9 @@ import {
 import { createUser, findUserByEmail } from "~/modules/user/service.server";
 import { generateUniqueUsername } from "~/modules/user/utils.server";
 import { detectFormatPrefsFromHints } from "~/utils/date-format";
+import { db } from "~/database/db.server";
+import { reconcileLanguageWithSupabase } from "~/i18n/language-sync.server";
+import { getSupabaseAdmin } from "~/integrations/supabase/client";
 
 import { action } from "~/routes/_auth+/otp";
 
@@ -36,7 +39,23 @@ vitest.mock("~/modules/organization/context.server", () => ({
 // module-level `void db.$connect()` rejects with P1001 in a DB-less test env and
 // surfaces as an unhandled rejection. The action reaches db only through the
 // already-mocked services, so a bare stub is sufficient.
-vitest.mock("~/database/db.server", () => ({ db: {} }));
+vitest.mock("~/database/db.server", () => ({
+  db: { user: { findUnique: vitest.fn() } },
+}));
+// why: read OTP signup metadata without calling the real Supabase Admin API.
+vitest.mock("~/integrations/supabase/client", () => ({
+  getSupabaseAdmin: vitest.fn(),
+}));
+// why: isolate local-user creation from the external metadata reconciliation.
+vitest.mock("~/i18n/language-sync.server", () => ({
+  reconcileLanguageWithSupabase: vitest.fn(),
+  withLanguageSyncStatus: (destination: string, status: string) =>
+    status === "pending"
+      ? `${destination}${
+          destination.includes("?") ? "&" : "?"
+        }languageSync=pending`
+      : destination,
+}));
 // why: keep the pure detector real elsewhere but pin its output so the assertion
 // is deterministic regardless of the host ICU/locale data.
 vitest.mock("~/utils/date-format", async (importOriginal) => {
@@ -90,6 +109,20 @@ describe("otp action — format pref detection", () => {
     setSelectedOrganizationIdCookie.mockResolvedValue("org-cookie");
     // @ts-expect-error missing vitest type
     detectFormatPrefsFromHints.mockReturnValue(DETECTED);
+    vitest.mocked(getSupabaseAdmin).mockReturnValue({
+      auth: {
+        admin: {
+          getUserById: vitest.fn().mockResolvedValue({
+            data: { user: { user_metadata: { language: "es" } } },
+            error: null,
+          }),
+        },
+      },
+    } as never);
+    vitest
+      .mocked(db.user.findUnique)
+      .mockResolvedValue({ language: "es" } as never);
+    vitest.mocked(reconcileLanguageWithSupabase).mockResolvedValue("synced");
   });
 
   it("detects prefs from the request and passes them to createUser on signup", async () => {
@@ -111,7 +144,7 @@ describe("otp action — format pref detection", () => {
 
     expect(detectFormatPrefsFromHints).toHaveBeenCalledTimes(1);
     expect(createUser).toHaveBeenCalledWith(
-      expect.objectContaining({ formatPrefs: DETECTED })
+      expect.objectContaining({ formatPrefs: DETECTED, language: "es" })
     );
   });
 
@@ -135,5 +168,34 @@ describe("otp action — format pref detection", () => {
         formatPrefs: { ...DETECTED, timeZone: null },
       })
     );
+  });
+
+  it("does not provision when the Auth metadata lookup fails", async () => {
+    vitest.mocked(getSupabaseAdmin).mockReturnValue({
+      auth: {
+        admin: {
+          getUserById: vitest.fn().mockResolvedValue({
+            data: { user: null },
+            error: new Error("Auth API unavailable"),
+          }),
+        },
+      },
+    } as never);
+    const formData = new FormData();
+    formData.append("email", USER_EMAIL);
+    formData.append("otp", "123456");
+
+    const response = (await action(
+      actionArgs(
+        new Request("http://localhost/otp", {
+          method: "POST",
+          headers: { "accept-language": "es-AR" },
+          body: formData,
+        })
+      )
+    )) as { init: ResponseInit };
+
+    expect(createUser).not.toHaveBeenCalled();
+    expect(response.init.status).toBe(500);
   });
 });

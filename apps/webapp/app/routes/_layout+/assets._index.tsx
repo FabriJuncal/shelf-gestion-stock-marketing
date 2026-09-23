@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type {
   ActionFunctionArgs,
   LinksFunction,
@@ -347,6 +348,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 ];
 
 export default function AssetIndexPage() {
+  const { t } = useTranslation();
   const { roles } = useUserRoleHelper();
   const { canImportAssets } = useLoaderData<typeof loader>();
   const { modeIsAdvanced } = useAssetIndexViewState();
@@ -369,10 +371,10 @@ export default function AssetIndexPage() {
       </Header>
       <AssetsList
         customEmptyStateContent={{
-          title: "No assets yet",
-          text: "Assets are the core of your inventory. Create your first asset to start tracking equipment, devices, or anything your team manages.",
+          title: t("inventory:noAssetsYet"),
+          text: t("inventory:noAssetsHelp"),
           newButtonRoute: "/assets/new",
-          newButtonContent: "Create your first asset",
+          newButtonContent: t("inventory:createFirstAsset"),
         }}
       />
     </div>

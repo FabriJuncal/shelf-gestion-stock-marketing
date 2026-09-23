@@ -6,6 +6,7 @@
  * @see {@link file://./settings.asset-models.tsx} Parent layout
  */
 import type { AssetModel, Category } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import { data } from "react-router";
 import AssetModelQuickActions from "~/components/asset-model/asset-model-quick-actions";
@@ -18,6 +19,8 @@ import { Badge } from "~/components/shared/badge";
 import { Button } from "~/components/shared/button";
 import { Th, Td } from "~/components/table";
 import { useUserRoleHelper } from "~/hooks/user-user-role-helper";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { getAssetModels } from "~/modules/asset-model/service.server";
 import { appendToMetaTitle } from "~/utils/append-to-meta-title";
 import {
@@ -59,10 +62,10 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     });
     const totalPages = Math.ceil(totalAssetModels / perPage);
 
+    const i18n = createI18n(await resolveRequestLanguage({ request }));
     const header: HeaderData = {
-      title: "Asset Models",
-      subHeading:
-        "Asset models are templates for grouping similar assets. Use them to define default values and track groups of identical items like laptop models or equipment types.",
+      title: i18n.t("inventory:assetModels"),
+      subHeading: i18n.t("inventory:assetModelsHelp"),
     };
     const modelName = {
       singular: "asset model",
@@ -95,25 +98,27 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 ];
 
 export default function AssetModelsIndexPage() {
+  const { t } = useTranslation();
   const { isBaseOrSelfService } = useUserRoleHelper();
 
   return (
     <>
       <div className="mb-2.5 flex items-center justify-between bg-white md:rounded md:border md:border-gray-200 md:px-6 md:py-5">
         <div>
-          <h2 className="text-lg text-gray-900">Asset Models</h2>
+          <h2 className="text-lg text-gray-900">
+            {t("inventory:assetModels")}
+          </h2>
           <p className="text-sm text-gray-600">
-            Asset models are templates for grouping similar assets. Use them to
-            define default values and track groups of identical items.
+            {t("inventory:assetModelsHelp")}
           </p>
         </div>
         <Button
           to="new"
           role="link"
-          aria-label="new asset model"
+          aria-label={t("inventory:newAssetModel")}
           data-test-id="createNewAssetModel"
         >
-          New asset model
+          {t("inventory:newAssetModel")}
         </Button>
       </div>
       <List
@@ -123,10 +128,10 @@ export default function AssetModelsIndexPage() {
         ItemComponent={AssetModelItem}
         headerChildren={
           <>
-            <Th>Description</Th>
-            <Th>Default category</Th>
-            <Th>Assets</Th>
-            <Th>Actions</Th>
+            <Th>{t("inventory:description")}</Th>
+            <Th>{t("inventory:defaultCategory")}</Th>
+            <Th>{t("inventory:assets")}</Th>
+            <Th>{t("inventory:actions")}</Th>
           </>
         }
       />

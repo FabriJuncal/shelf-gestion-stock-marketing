@@ -6,9 +6,10 @@ type RelativeTimeUnit =
   | "hours"
   | "minutes"
   | "seconds";
-export function timeAgo(input: Date | string) {
+export function timeAgo(input: Date | string, language = "en") {
   const date = new Date(input);
-  const formatter = new Intl.RelativeTimeFormat("en");
+  const locale = language.startsWith("es") ? "es" : "en";
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
 
   const ranges: Record<RelativeTimeUnit, number> = {
     years: 3600 * 24 * 365,
@@ -26,5 +27,5 @@ export function timeAgo(input: Date | string) {
       return formatter.format(Math.round(delta), key);
     }
   }
-  return "Just now";
+  return locale === "es" ? "Ahora mismo" : "Just now";
 }

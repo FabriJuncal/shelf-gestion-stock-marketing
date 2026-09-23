@@ -14,6 +14,7 @@
 import { useEffect } from "react";
 import type { AssetModel } from "@prisma/client";
 import { useAtom, useAtomValue } from "jotai";
+import { useTranslation } from "react-i18next";
 import { useActionData, useLoaderData } from "react-router";
 import { useZorm } from "react-zorm";
 import z from "zod";
@@ -90,6 +91,7 @@ export default function AssetModelForm({
   onCancel,
   onSuccess,
 }: AssetModelFormProps) {
+  const { t } = useTranslation();
   const zo = useZorm("AssetModelForm", AssetModelFormSchema);
   const fetcher = useFetcherWithReset<typeof action>();
   // Replaces `autoFocus` on the Name input. Mounts inside a layout Dialog
@@ -164,8 +166,8 @@ export default function AssetModelForm({
         <div className="gap-4 md:flex md:items-end">
           <Input
             ref={nameInputRef}
-            label="Name"
-            placeholder="Asset model name"
+            label={t("inventory:name")}
+            placeholder={t("inventory:assetModelName")}
             className="mb-4 lg:mb-0 lg:max-w-[180px]"
             name={zo.fields.name()}
             disabled={disabled}
@@ -175,8 +177,8 @@ export default function AssetModelForm({
             defaultValue={assetModel?.name}
           />
           <Input
-            label="Description"
-            placeholder="Description (optional)"
+            label={t("inventory:description")}
+            placeholder={t("inventory:optionalDescription")}
             name={zo.fields.description()}
             disabled={disabled}
             className="mb-4 lg:mb-0"
@@ -188,7 +190,7 @@ export default function AssetModelForm({
         {/* Same cover-image field as the settings form, in a compact layout. */}
         <div className="mt-4">
           <Input
-            label="Image"
+            label={t("inventory:image")}
             // Input spreads unknown props straight onto the <input> and adds no
             // describedby of its own, so this is the only link between the field
             // and its format/size requirements for assistive tech.
@@ -205,8 +207,7 @@ export default function AssetModelForm({
             id={INLINE_IMAGE_HELP_ID}
             className="mt-1 text-[12px] text-gray-500"
           >
-            Optional. Shown on every asset of this model that has no image of
-            its own. PNG, JPG, JPEG or WebP, max. 8 MB.
+            {t("inventory:assetModelImageHelp")}
           </p>
         </div>
 
@@ -221,7 +222,7 @@ export default function AssetModelForm({
                 className="flex-1"
                 disabled={disabled}
               >
-                Cancel
+                {t("common:cancel")}
               </Button>
             ) : null}
             <Button
@@ -230,7 +231,7 @@ export default function AssetModelForm({
               className="flex-1"
               disabled={disabled}
             >
-              {disabled ? "Creating..." : "Create"}
+              {disabled ? t("inventory:creating") : t("inventory:create")}
             </Button>
           </div>
 
@@ -263,6 +264,7 @@ function FullPageForm({
 }: {
   assetModel?: AssetModelFormProps["assetModel"];
 }) {
+  const { t } = useTranslation();
   const zo = useZorm("AssetModelForm", AssetModelFormSchema);
   // Page form submits via navigation, so the disabled state must watch the
   // router's navigation state — not a fetcher.
@@ -308,11 +310,13 @@ function FullPageForm({
         {/* -- Top action bar (visible on md+) -- */}
         <div className="flex items-start justify-between border-b pb-5">
           <div>
-            <h2 className="mb-1 text-[18px] font-semibold">Asset model</h2>
+            <h2 className="mb-1 text-[18px] font-semibold">
+              {t("inventory:assetModel")}
+            </h2>
             <p>
               {assetModel
-                ? "Edit the details of your asset model."
-                : "Define a reusable template for your assets."}
+                ? t("inventory:assetModelEditHelp")
+                : t("inventory:assetModelCreateHelp")}
             </p>
           </div>
           <div className="hidden flex-1 justify-end gap-2 md:flex">
@@ -322,13 +326,13 @@ function FullPageForm({
 
         {/* -- Name -- */}
         <FormRow
-          rowLabel="Name"
+          rowLabel={t("inventory:name")}
           className="border-b-0 pb-[10px]"
           required={true}
         >
           <Input
             ref={nameInputRef}
-            label="Name"
+            label={t("inventory:name")}
             hideLabel
             name={zo.fields.name()}
             disabled={disabled}
@@ -342,27 +346,27 @@ function FullPageForm({
 
         {/* -- Description -- */}
         <FormRow
-          rowLabel="Description"
-          subHeading="A short description of this asset model. Maximum 1000 characters."
+          rowLabel={t("inventory:description")}
+          subHeading={t("inventory:assetModelDescriptionHelp")}
           className="border-b-0 pb-[10px]"
         >
           <Input
             inputType="textarea"
             maxLength={1000}
-            label="Description"
+            label={t("inventory:description")}
             hideLabel
             name={zo.fields.description()}
             disabled={disabled}
             className="w-full"
-            placeholder="Add a description for this asset model."
+            placeholder={t("inventory:assetModelDescriptionPlaceholder")}
             defaultValue={assetModel?.description || ""}
           />
         </FormRow>
 
         {/* -- Default Category -- */}
         <FormRow
-          rowLabel="Default category"
-          subHeading="Assets created from this model will inherit this category."
+          rowLabel={t("inventory:defaultCategory")}
+          subHeading={t("inventory:defaultCategoryHelp")}
           className="border-b-0 pb-[10px]"
         >
           <DynamicSelect
@@ -370,8 +374,8 @@ function FullPageForm({
             defaultValue={assetModel?.defaultCategoryId ?? undefined}
             model={{ name: "category", queryKey: "name" }}
             triggerWrapperClassName="flex flex-col !gap-0 justify-start items-start [&_.inner-label]:w-full [&_.inner-label]:text-left"
-            contentLabel="Categories"
-            label="Category"
+            contentLabel={t("inventory:categories")}
+            label={t("inventory:category")}
             hideLabel
             fieldName="defaultCategoryId"
             initialDataKey="categories"
@@ -384,14 +388,14 @@ function FullPageForm({
 
         {/* -- Default Valuation -- */}
         <FormRow
-          rowLabel="Default valuation"
-          subHeading="Assets created from this model will inherit this value."
+          rowLabel={t("inventory:defaultValuation")}
+          subHeading={t("inventory:defaultValuationHelp")}
           className="border-b-0 py-[10px]"
         >
           <div className="relative w-full">
             <Input
               type="number"
-              label="Default valuation"
+              label={t("inventory:defaultValuation")}
               inputClassName="pl-[70px] valuation-input"
               hideLabel
               name={zo.fields.defaultValuation()}
@@ -414,8 +418,8 @@ function FullPageForm({
 
         {/* -- Image -- */}
         <FormRow
-          rowLabel="Image"
-          subHeading="Uploaded once and shown on every asset of this model that has no image of its own."
+          rowLabel={t("inventory:image")}
+          subHeading={t("inventory:assetModelImageHelp")}
           className="border-b-0 pt-[10px]"
         >
           <div>
@@ -440,7 +444,7 @@ function FullPageForm({
               name="image"
               type="file"
               onChange={validateFile}
-              label="Image"
+              label={t("inventory:image")}
               hideLabel
               /**
                * The requirements text is duplicated for the two breakpoints, so
@@ -492,18 +496,19 @@ function FullPageForm({
  * Cancel + Save buttons shared between top and bottom of the form.
  */
 function Actions({ disabled }: { disabled: boolean }) {
+  const { t } = useTranslation();
   return (
     <>
       {/* Save is first in DOM so Enter triggers it */}
       <Button type="submit" disabled={disabled} className="order-last">
-        {disabled ? "Saving..." : "Save"}
+        {disabled ? t("inventory:saving") : t("common:save")}
       </Button>
       <Button
         variant="secondary"
         to="/settings/asset-models"
         disabled={disabled}
       >
-        Cancel
+        {t("common:cancel")}
       </Button>
     </>
   );

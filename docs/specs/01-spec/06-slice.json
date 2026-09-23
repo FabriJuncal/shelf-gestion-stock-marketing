@@ -1,0 +1,121 @@
+{
+  "slice_id": "06-slice",
+  "slice_number": "06",
+  "title": "Administración, reportes y comunicaciones de la aplicación",
+  "status": "pending",
+  "objective": "Completar la experiencia bilingüe de configuración y las salidas que produce la aplicación.",
+  "problem": "La traducción operativa queda incompleta si configuración, reportes, correos y notificaciones conservan inglés.",
+  "value_outcome": "El usuario configura su cuenta/organización, consulta reportes y recibe comunicaciones en el idioma correspondiente.",
+  "scope_summary": "Superficies administrativas y salidas derivadas de los módulos ya localizados.",
+  "scope": {
+    "includes": [
+      "Perfil restante, organizaciones, equipo, roles, campos personalizados, configuración y pantallas administrativas habilitadas.",
+      "Dashboard y reportes, impresión y documentos destinados a personas.",
+      "Textos de suscripción/facturación propios de la app si están habilitados, sin modificar importes ni portales externos.",
+      "Correos de aplicación: invitaciones, bienvenida, reservas, auditorías, recordatorios y alertas habilitadas; asunto y cuerpo según destinatario.",
+      "Notificaciones y mensajes de sistema; revisar mecanismo existente para no fijar el idioma del emisor en nuevos mensajes.",
+      "Clasificar cada exportación entre documento para personas y archivo de intercambio, conservando contratos de este último."
+    ],
+    "excludes": [
+      "Correos Supabase Auth ya resueltos en 02.",
+      "Cambiar roles, precios, cálculos financieros, SMTP/cola o reglas de reportes.",
+      "Traducir contenido libre, pies de correo personalizados o portales externos.",
+      "Migrar retrospectivamente texto libre histórico."
+    ]
+  },
+  "actors": [
+    "Usuario autenticado",
+    "Administrador autorizado",
+    "Destinatario de comunicación"
+  ],
+  "preconditions": [
+    "Slices 02 a 05 terminados y glosario estable.",
+    "Acceso de prueba a funciones habilitadas y transporte de correo controlado."
+  ],
+  "inputs": [
+    "Preferencia del usuario/destinatario y catálogos de los módulos.",
+    "Plantillas de app, reportes y contratos de exportación existentes.",
+    "Inventario de funcionalidades habilitadas."
+  ],
+  "outputs": [
+    "Administración/dashboard/reportes bilingües.",
+    "Correos y notificaciones localizados por destinatario.",
+    "Clasificación y comprobación de compatibilidad de salidas."
+  ],
+  "workflow": [
+    {
+      "step": 1,
+      "name": "Localizar administración",
+      "description": "Convertir configuración y superficies administrativas respetando visibilidad de roles y flags."
+    },
+    {
+      "step": 2,
+      "name": "Localizar reportes",
+      "description": "Traducir títulos, leyendas, períodos y documentos para personas sin alterar consultas ni valores."
+    },
+    {
+      "step": 3,
+      "name": "Localizar comunicaciones",
+      "description": "Resolver idioma del destinatario al construir asunto/cuerpo; preservar mecanismos actuales de envío/reintento."
+    },
+    {
+      "step": 4,
+      "name": "Verificar salidas",
+      "description": "Comprobar documento localizado, archivo de intercambio y comunicación a destinatario de idioma distinto al emisor."
+    }
+  ],
+  "business_rules": [
+    "RF-06, RF-07 y RF-09.",
+    "Correo usa idioma conocido del destinatario; sin preferencia, en; no inferir por dirección de correo.",
+    "Reporte para personas usa idioma del solicitante; intercambio conserva identificadores/esquema/valores.",
+    "Localizar presentación monetaria no convierte moneda ni recalcula importes.",
+    "No alterar contenido libre ni permisos."
+  ],
+  "validations": [
+    "Smoke de configuración y vista administrativa representativa en en/es usando roles ya existentes.",
+    "Correo representativo a destinatario con idioma diferente al emisor y a destinatario sin preferencia; verificar asunto/cuerpo.",
+    "Verificar plantillas restantes mediante renderizado y paridad de catálogos, sin enviar un correo real por cada plantilla.",
+    "Comparar datos/totales del reporte representativo y encabezados/textos localizados.",
+    "Reimportar archivo de prueba del formato afectado o validar su contrato, según el alcance real del cambio.",
+    "Comprobar notificación de sistema en ambos idiomas y conservar datos/firmas personalizadas."
+  ],
+  "error_cases": [
+    "Destinatario sin User.language conocido: respaldo en inglés.",
+    "Fallo de envío mantiene comportamiento de reintento/error existente; no cambiar idioma al reintentar un mensaje ya renderizado.",
+    "Archivos con esquema requerido por importadores no traducen sus cabeceras contractuales.",
+    "Texto histórico de sistema debe inventariarse: elegir representación compatible sin reescribir contenido libre."
+  ],
+  "acceptance_criteria": [
+    "06-AC1: configuración y superficies administrativas habilitadas inventariadas están localizadas.",
+    "06-AC2: correos nuevos usan idioma del destinatario, incluido respaldo y asunto.",
+    "06-AC3: reportes/documentos localizados conservan datos y totales.",
+    "06-AC4: archivos de intercambio conservan compatibilidad comprobada.",
+    "06-AC5: notificaciones de sistema tienen presentación localizada; contenido libre y permisos permanecen intactos.",
+    "06-AC6: inventario de cobertura completa todas las superficies pendientes de los slices anteriores, sin exclusiones silenciosas."
+  ],
+  "dependencies": {
+    "functional": [
+      "Vocabulario/catálogos operativos y resolución por destinatario."
+    ],
+    "technical": [
+      "apps/webapp/app/routes/_layout+/settings*",
+      "apps/webapp/app/routes/_layout+/account-details*",
+      "apps/webapp/app/routes/_layout+/admin-dashboard+/",
+      "apps/webapp/app/modules/reports/",
+      "apps/webapp/app/emails/",
+      "apps/webapp/app/utils/csv.server.ts"
+    ],
+    "external": ["Entrega de correo de prueba ya configurada"],
+    "depends_on_slices": ["02-slice", "03-slice", "04-slice", "05-slice"]
+  },
+  "implementation_order": 6,
+  "slicing_rationale": "Completa configuración y salidas que consumen vocabulario de varios módulos; mantiene separadas las pruebas de comunicación y contratos de datos.",
+  "risks": [
+    "Localizar CSV indiscriminadamente puede romper reimportación.",
+    "Mensajes compartidos entre destinatarios no deben adoptar idioma del emisor.",
+    "Notificaciones históricas pueden almacenar texto final: inventariar su representación antes de afirmar cobertura."
+  ],
+  "open_questions": [
+    "Durante implementación, clasificar formatos concretos y mecanismos de notificación existentes; conservar contratos y contenido libre conforme al spec."
+  ]
+}

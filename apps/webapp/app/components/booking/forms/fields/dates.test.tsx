@@ -39,6 +39,15 @@ vi.mock("~/hooks/use-date-formatter", () => ({
   }),
 }));
 
+// why: this regression suite exercises controlled date wires without mounting
+// the app root's i18n provider.
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    i18n: { language: "en", resolvedLanguage: "en" },
+    t: (key: string) => key,
+  }),
+}));
+
 /** Minimal props for DatesFields; per-test overrides applied on top. */
 function baseProps() {
   return {

@@ -7,12 +7,20 @@
 import type { ReactNode } from "react";
 import { AssetStatus, AssetType, BookingStatus } from "@prisma/client";
 import { cleanup, render, screen } from "@testing-library/react";
+import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createI18n } from "~/i18n/i18n";
 import type { AssetWithBooking } from "~/routes/_layout+/bookings.$bookingId.overview.manage-assets";
 import { AvailabilityLabel } from "./availability-label";
 
 const mockUseLoaderData = vi.fn();
+
+function renderLabel(ui: ReactNode) {
+  return render(
+    <I18nextProvider i18n={createI18n("en")}>{ui}</I18nextProvider>
+  );
+}
 
 // why: the label reads the current booking from route loader data, and there
 // is no router around a component rendered on its own.
@@ -68,7 +76,7 @@ describe("AvailabilityLabel — reserved by model", () => {
   });
 
   it("shows the badge when the unit's model is reserved elsewhere", () => {
-    render(
+    renderLabel(
       <AvailabilityLabel
         asset={unit({ modelReservedElsewhere: true })}
         isCheckedOut={false}
@@ -79,7 +87,7 @@ describe("AvailabilityLabel — reserved by model", () => {
   });
 
   it("shows nothing for an available unit without the flag", () => {
-    const { container } = render(
+    const { container } = renderLabel(
       <AvailabilityLabel asset={unit()} isCheckedOut={false} />
     );
 
@@ -87,7 +95,7 @@ describe("AvailabilityLabel — reserved by model", () => {
   });
 
   it("lets an administrator's unbookable flag outrank it", () => {
-    render(
+    renderLabel(
       <AvailabilityLabel
         asset={unit({ availableToBook: false, modelReservedElsewhere: true })}
         isCheckedOut={false}
@@ -99,7 +107,7 @@ describe("AvailabilityLabel — reserved by model", () => {
   });
 
   it("lets a concrete overlapping booking outrank it", () => {
-    render(
+    renderLabel(
       <AvailabilityLabel
         asset={unit({
           modelReservedElsewhere: true,
@@ -122,7 +130,7 @@ describe("AvailabilityLabel — reserved by model", () => {
   });
 
   it("lets a unit that is checked out outrank it", () => {
-    render(
+    renderLabel(
       <AvailabilityLabel
         asset={unit({
           status: AssetStatus.CHECKED_OUT,

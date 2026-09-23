@@ -9,6 +9,7 @@
 
 import { useCallback, useState } from "react";
 import { Download } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "~/components/shared/button";
 import { useSearchParams } from "~/hooks/search-params";
@@ -43,6 +44,7 @@ export function ExportReportButton({
   variant = "secondary",
   className,
 }: ExportReportButtonProps) {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [exporting, setExporting] = useState(false);
 
@@ -97,7 +99,7 @@ export function ExportReportButton({
     >
       <Download className="size-4" />
       <span className="hidden sm:inline">
-        {exporting ? "Exporting..." : "Export CSV"}
+        {exporting ? t("audit:exporting") : t("audit:exportCsv")}
       </span>
     </Button>
   );

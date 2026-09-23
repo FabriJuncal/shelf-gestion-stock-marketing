@@ -28,6 +28,7 @@ import {
   TimeFormatPreference as TimeFormatPreferenceEnum,
   WeekStartPreference as WeekStartPreferenceEnum,
 } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import { useActionData } from "react-router";
 import { useZorm } from "react-zorm";
 import { z } from "zod";
@@ -37,6 +38,7 @@ import { Button } from "~/components/shared/button";
 import { Card } from "~/components/shared/card";
 import { useDisabled } from "~/hooks/use-disabled";
 import { useFormatPrefs } from "~/hooks/use-format-prefs";
+import type { AppLanguage } from "~/i18n/types";
 import type { getUserWithContact } from "~/modules/user/service.server";
 import type { UserPageActionData } from "~/routes/_layout+/account-details.general";
 import { formatDate, isValidTimeZone } from "~/utils/date-format";
@@ -141,6 +143,7 @@ export function LanguageRegionForm({
   const zo = useZorm("LanguageRegionForm", FormatPrefsFormSchema);
   const data = useActionData<UserPageActionData>();
   const disabled = useDisabled();
+  const { t, i18n } = useTranslation();
 
   // Resolved prefs (stored value → hint → hardcoded default) supply the
   // fallback for any DB field still null. Concrete values only.
@@ -164,6 +167,14 @@ export function LanguageRegionForm({
   const [timeZone, setTimeZone] = useState<string>(
     () => user?.timeZone ?? resolved.timeZone
   );
+  const [language, setLanguage] = useState<AppLanguage>(() => {
+    const stored = user?.language as AppLanguage | null;
+    return stored === "en" || stored === "es"
+      ? stored
+      : i18n.language === "es"
+      ? "es"
+      : "en";
+  });
 
   // Build concrete resolved prefs from the live selection for the preview.
   const livePrefs: ResolvedFormatPrefs = {
@@ -177,19 +188,41 @@ export function LanguageRegionForm({
   return (
     <Card className="my-0">
       <div className="mb-6">
-        <h3 className="text-text-lg font-semibold">Language &amp; region</h3>
+        <h3 className="text-text-lg font-semibold">
+          {t("common:languageRegion")}
+        </h3>
         <p className="text-sm text-gray-600">
-          Choose how dates, times, and calendars appear for your account.
+          {t("common:languageRegionHelp")}
         </p>
       </div>
       <Form method="post" ref={zo.ref} replace>
+        {data && "languageSyncPending" in data && data.languageSyncPending ? (
+          <p role="status" className="mb-3 text-sm text-warning-600">
+            {t("common:languageSyncPending")}
+          </p>
+        ) : null}
         <FormRow
-          rowLabel="Date format"
+          rowLabel={t("common:language")}
           className="border-b-0 border-t"
           required={false}
         >
+          <FormatPrefField label={t("common:language")}>
+            <select
+              name="language"
+              value={language}
+              onChange={(event) =>
+                setLanguage(event.target.value as AppLanguage)
+              }
+              className="h-10 w-full rounded border border-gray-300 bg-white px-3 text-sm"
+            >
+              <option value="en">{t("common:english")}</option>
+              <option value="es">{t("common:spanish")}</option>
+            </select>
+          </FormatPrefField>
+        </FormRow>
+        <FormRow rowLabel={t("common:dateFormat")} required={false}>
           <FormatPrefField
-            label="Date format"
+            label={t("common:dateFormat")}
             error={validationErrors?.dateFormat?.message}
           >
             <DateFormatSelect
@@ -200,9 +233,9 @@ export function LanguageRegionForm({
           </FormatPrefField>
         </FormRow>
 
-        <FormRow rowLabel="Time format" required={false}>
+        <FormRow rowLabel={t("common:timeFormat")} required={false}>
           <FormatPrefField
-            label="Time format"
+            label={t("common:timeFormat")}
             error={validationErrors?.timeFormat?.message}
           >
             <TimeFormatSelect
@@ -213,9 +246,9 @@ export function LanguageRegionForm({
           </FormatPrefField>
         </FormRow>
 
-        <FormRow rowLabel="Week starts on" required={false}>
+        <FormRow rowLabel={t("common:weekStartsOn")} required={false}>
           <FormatPrefField
-            label="Week starts on"
+            label={t("common:weekStartsOn")}
             error={validationErrors?.weekStart?.message}
           >
             <WeekStartSelect
@@ -226,9 +259,9 @@ export function LanguageRegionForm({
           </FormatPrefField>
         </FormRow>
 
-        <FormRow rowLabel="Time zone" required={false}>
+        <FormRow rowLabel={t("common:timeZone")} required={false}>
           <FormatPrefField
-            label="Time zone"
+            label={t("common:timeZone")}
             error={
               validationErrors?.timeZone?.message ||
               zo.errors.timeZone()?.message
@@ -246,19 +279,27 @@ export function LanguageRegionForm({
           className="mt-2 flex items-center gap-2 text-xs text-gray-500"
           aria-live="polite"
         >
-          <span>Dates will look like:</span>
+          <span>{t("common:datePreview")}</span>
           <span className="font-medium text-gray-700">{preview}</span>
         </div>
 
-        <div className="mt-4 text-right">
+        <div className="mt-4 flex justify-end gap-2">
           <input type="hidden" name="type" value="updateFormatPrefs" />
+          <Button
+            disabled={disabled}
+            type="submit"
+            name="intent"
+            value="updateLanguage"
+          >
+            {disabled ? t("common:saving") : t("common:saveLanguage")}
+          </Button>
           <Button
             disabled={disabled}
             type="submit"
             name="intent"
             value="updateFormatPrefs"
           >
-            {disabled ? "Saving..." : "Save"}
+            {disabled ? t("common:saving") : t("common:save")}
           </Button>
         </div>
       </Form>

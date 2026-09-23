@@ -27,6 +27,7 @@
  */
 
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   type AuditAssetMeta,
   type AuditScannedItem,
@@ -100,6 +101,7 @@ export function AuditItemRow({
   auditAssetMeta,
   showLocation,
 }: AuditItemRowProps) {
+  const { t } = useTranslation();
   const itemType = item?.type;
 
   return (
@@ -158,19 +160,17 @@ export function AuditItemRow({
         const availabilityConfigs = [
           {
             condition: isExpected,
-            badgeText: "Expected",
-            tooltipTitle: "Expected asset",
-            tooltipContent:
-              "This asset belongs to this audit according to records.",
+            badgeText: t("audit:expected"),
+            tooltipTitle: t("audit:expectedAsset"),
+            tooltipContent: t("audit:expectedAssetDescription"),
             priority: 100,
             className: "border-green-200 bg-green-50 text-green-700",
           },
           {
             condition: isUnexpected,
-            badgeText: "Unexpected",
-            tooltipTitle: "Unexpected asset",
-            tooltipContent:
-              "This asset was not expected in this audit context.",
+            badgeText: t("audit:unexpected"),
+            tooltipTitle: t("audit:unexpectedAsset"),
+            tooltipContent: t("audit:unexpectedAssetDescription"),
             priority: 90,
             // Warning, not danger: an asset in your hands but filed wrong is a
             // lesser problem than one that is gone, which is what danger is
@@ -269,6 +269,7 @@ export function AuditPendingRow({
   auditAssetMeta,
   showLocation,
 }: AuditPendingRowProps) {
+  const { t } = useTranslation();
   return (
     <Tr skipEntrance>
       <td className="w-full p-0 md:p-0">
@@ -276,7 +277,7 @@ export function AuditPendingRow({
           <div className="flex items-center gap-2">
             <ImageWithPreview
               thumbnailUrl={asset.thumbnailImage || asset.mainImage}
-              alt={asset.name || "Asset"}
+              alt={asset.name || t("audit:asset")}
               className="size-[54px] rounded-[2px]"
             />
 
@@ -305,11 +306,11 @@ export function AuditPendingRow({
                 </span>
               )}
               <div className="flex flex-wrap items-center gap-1">
-                <span className={assetTypeBadgeClass}>asset</span>
+                <span className={assetTypeBadgeClass}>{t("audit:asset")}</span>
                 <AvailabilityBadge
-                  badgeText="Pending"
-                  tooltipTitle="Pending scan"
-                  tooltipContent="This asset is expected but has not been scanned yet."
+                  badgeText={t("audit:status.PENDING")}
+                  tooltipTitle={t("audit:pendingScan")}
+                  tooltipContent={t("audit:pendingScanDescription")}
                   className="border-gray-200 bg-gray-50 text-gray-600"
                 />
                 {/* Action buttons for notes and images on pending assets */}

@@ -22,6 +22,7 @@
  * @see {@link file://./asset-model-form-row.tsx} the single-asset equivalent
  */
 import { useAtomValue } from "jotai";
+import { useTranslation } from "react-i18next";
 import { useLoaderData } from "react-router";
 import { useZorm } from "react-zorm";
 import { z } from "zod";
@@ -61,6 +62,7 @@ export const BulkAssetModelUpdateSchema = BulkAssetModelActionSchema.extend({
 });
 
 export default function BulkAssetModelUpdateDialog() {
+  const { t } = useTranslation();
   const { totalItems } = useLoaderData<AssetIndexLoaderData>();
   const zo = useZorm("BulkAssetModelUpdate", BulkAssetModelUpdateSchema);
 
@@ -98,8 +100,8 @@ export default function BulkAssetModelUpdateDialog() {
       ref={zo.ref}
       type="asset-model"
       arrayFieldId="assetIds"
-      title={`Group (${totalSelected}) assets into an asset model`}
-      description="Pick the model these assets belong to. Their category, value and custody are not changed."
+      title={t("inventory:groupAssetsInModel", { count: totalSelected })}
+      description={t("inventory:groupAssetsInModelHelp")}
     >
       {({ disabled, handleCloseDialog, fetcherError }) => (
         <div>
@@ -128,17 +130,17 @@ export default function BulkAssetModelUpdateDialog() {
                */
               error={zo.errors.assetModelId()?.message}
               model={{ name: "assetModel", queryKey: "name" }}
-              placeholder="Select asset model"
+              placeholder={t("inventory:selectAssetModel")}
               initialDataKey="assetModels"
               countKey="totalAssetModels"
               fieldName="assetModelId"
-              contentLabel="Asset models"
+              contentLabel={t("inventory:assetModels")}
               closeOnSelect
               extraContent={({ onItemCreated, closePopover }) => (
                 <InlineEntityCreationDialog
                   type="assetModel"
-                  title="Create new asset model"
-                  buttonLabel="Create new asset model"
+                  title={t("inventory:newAssetModel")}
+                  buttonLabel={t("inventory:newAssetModel")}
                   onCreated={(created) => {
                     if (created?.type !== "assetModel") return;
                     const assetModel = created.entity;
@@ -169,7 +171,7 @@ export default function BulkAssetModelUpdateDialog() {
               disabled={disabled}
               onClick={handleCloseDialog}
             >
-              Cancel
+              {t("common:cancel")}
             </Button>
             <Button
               type="submit"
@@ -177,7 +179,7 @@ export default function BulkAssetModelUpdateDialog() {
               width="full"
               disabled={disabled}
             >
-              Confirm
+              {t("inventory:confirm")}
             </Button>
           </div>
         </div>

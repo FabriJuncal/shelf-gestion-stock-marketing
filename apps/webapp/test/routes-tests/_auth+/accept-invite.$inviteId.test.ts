@@ -24,7 +24,12 @@
  */
 
 // why: preventing Prisma from trying to connect to a real database during tests
-vi.mock("~/database/db.server", () => ({ db: {} }));
+vi.mock("~/database/db.server", () => ({
+  db: {
+    invite: { findFirstOrThrow: vi.fn() },
+    user: { findUnique: vi.fn() },
+  },
+}));
 
 // why: mocking Remix's data() so the action's error path returns a readable
 // Response rather than an internal payload object
@@ -61,8 +66,9 @@ vi.mock("~/modules/organization/context.server", () => ({
   setSelectedOrganizationIdCookie: vi.fn().mockResolvedValue("org-cookie"),
 }));
 
+import { db } from "~/database/db.server";
 import { updateInviteStatus } from "~/modules/invite/service.server";
-import { action } from "~/routes/_auth+/accept-invite.$inviteId";
+import { action, loader, meta } from "~/routes/_auth+/accept-invite.$inviteId";
 // The real secret, stubbed by test/setup-test-env.ts — signing with the same
 // value the route verifies with keeps this a test of the id check, not of JWT.
 import { INVITE_TOKEN_SECRET } from "~/utils/env";
@@ -76,15 +82,29 @@ function tokenFor(inviteId: string, secret: string = INVITE_TOKEN_SECRET) {
 }
 
 /** Invokes the action for `/accept-invite/:inviteId` with a token in the body. */
-function accept({ inviteId, token }: { inviteId: string; token: string }) {
+function accept({
+  inviteId,
+  token,
+  authenticated = false,
+}: {
+  inviteId: string;
+  token: string;
+  authenticated?: boolean;
+}) {
   return action({
     request: new Request(`https://app.shelf.nu/accept-invite/${inviteId}`, {
       method: "POST",
+      headers: authenticated
+        ? {
+            "accept-language": "en-US",
+            cookie: "shelf-language=en",
+          }
+        : { "accept-language": "es-AR" },
       body: new URLSearchParams({ token }),
     }),
     params: { inviteId },
     context: {
-      isAuthenticated: false,
+      isAuthenticated: authenticated,
       getSession: () => ({ userId: "user-1" }),
       setSession: vi.fn(),
     },
@@ -132,7 +152,26 @@ describe("accept-invite action", () => {
     expect(updateInviteStatus).toHaveBeenCalledTimes(1);
     expect((updateInviteStatus as any).mock.calls[0][0]).toMatchObject({
       id: "real-invite",
+      language: "es",
     });
+  });
+
+  it("uses the account language for an authenticated invite acceptance", async () => {
+    vi.mocked(db.user.findUnique).mockResolvedValue({ language: "es" } as any);
+
+    await accept({
+      inviteId: "real-invite",
+      token: tokenFor("real-invite"),
+      authenticated: true,
+    });
+
+    expect(db.user.findUnique).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      select: { language: true },
+    });
+    expect(updateInviteStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ language: "es" })
+    );
   });
 
   it("still rejects a token signed with the wrong secret", async () => {
@@ -142,5 +181,64 @@ describe("accept-invite action", () => {
     });
 
     expect(updateInviteStatus).not.toHaveBeenCalled();
+  });
+});
+
+describe("accept-invite loader", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("uses the account language for authenticated invite errors", async () => {
+    vi.mocked(db.user.findUnique).mockResolvedValue({ language: "es" } as any);
+    vi.mocked(db.invite.findFirstOrThrow).mockRejectedValue(
+      new Error("missing invite")
+    );
+
+    let thrown: unknown;
+    try {
+      await loader({
+        request: new Request(
+          "https://app.shelf.nu/accept-invite/missing-invite",
+          {
+            headers: {
+              "accept-language": "en-US",
+              cookie: "shelf-language=en",
+            },
+          }
+        ),
+        params: { inviteId: "missing-invite" },
+        context: {
+          isAuthenticated: true,
+          getSession: () => ({ userId: "user-1" }),
+        },
+      } as unknown as Parameters<typeof loader>[0]);
+    } catch (cause) {
+      thrown = cause;
+    }
+
+    expect(thrown).toBeInstanceOf(Response);
+    expect(await (thrown as Response).text()).toContain(
+      "No se encontró la invitación"
+    );
+  });
+
+  it("returns a Spanish document title for a Spanish invite page", async () => {
+    vi.mocked(db.invite.findFirstOrThrow).mockResolvedValue({
+      inviter: { displayName: "Ada", firstName: "Ada", lastName: "Lovelace" },
+      organization: { name: "Analytical Engines" },
+    } as any);
+
+    const loaderData = await loader({
+      request: new Request("https://app.shelf.nu/accept-invite/real-invite", {
+        headers: { "accept-language": "es-AR" },
+      }),
+      params: { inviteId: "real-invite" },
+      context: { isAuthenticated: false },
+    } as unknown as Parameters<typeof loader>[0]);
+
+    expect(meta({ data: loaderData } as never)).toEqual([
+      { title: "Aceptar invitación | shelf.nu" },
+    ]);
   });
 });

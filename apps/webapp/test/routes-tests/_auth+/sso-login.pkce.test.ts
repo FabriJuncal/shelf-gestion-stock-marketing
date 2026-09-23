@@ -11,8 +11,15 @@
  */
 import { assertIsDataWithResponseInit } from "@helpers/assertions";
 import { createLoaderArgs } from "@mocks/remix";
+import type { ActionFunctionArgs } from "react-router";
 import { describe, expect, it, vi } from "vitest";
+import {
+  AUTH_ERROR_CODES,
+  authErrorData,
+} from "~/modules/auth/localize-error.server";
+import { signInWithSSO } from "~/modules/auth/service.server";
 import { mobilePkceChallengeCookie } from "~/utils/cookies.server";
+import { ShelfError } from "~/utils/error";
 
 // why: importing the route pulls the Prisma client transitively; without this
 // the suite emits an unhandled P1001 trying to reach a database it never uses.
@@ -24,6 +31,12 @@ vi.mock("~/config/shelf.config", () => ({
   config: { disableSSO: false },
 }));
 
+// why: route tests exercise localized orchestration without contacting the
+// hosted Supabase SSO endpoint.
+vi.mock("~/modules/auth/service.server", () => ({
+  signInWithSSO: vi.fn(),
+}));
+
 // why: a default SSO domain would short-circuit the web branch and change what
 // the non-mobile assertions exercise.
 vi.mock("~/utils/env", async () => ({
@@ -31,7 +44,7 @@ vi.mock("~/utils/env", async () => ({
   DEFAULT_SSO_DOMAIN: "",
 }));
 
-const { loader } = await import("~/routes/_auth+/sso-login");
+const { action, loader } = await import("~/routes/_auth+/sso-login");
 
 /** A well-formed S256 challenge: 43 chars of base64url. */
 const VALID_CHALLENGE = "a".repeat(43);
@@ -108,5 +121,45 @@ describe("GET /sso-login — PKCE requirement", () => {
     // its session over a cookie and must keep working without one.
     const result = await invoke("");
     expect(result).toBeDefined();
+  });
+});
+
+describe("POST /sso-login — localized provider errors", () => {
+  it("returns a missing-provider failure in Spanish", async () => {
+    vi.mocked(signInWithSSO).mockRejectedValue(
+      new ShelfError({
+        cause: null,
+        label: "Auth",
+        message: "No SSO provider assigned for this domain",
+        additionalData: authErrorData(AUTH_ERROR_CODES.ssoProviderNotFound, {
+          domain: "example.com",
+        }),
+        shouldBeCaptured: false,
+      })
+    );
+
+    const response = await action({
+      request: new Request("http://localhost/sso-login", {
+        method: "POST",
+        headers: {
+          "accept-language": "es-AR",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          domain: "example.com",
+          platform: "web",
+        }),
+      }),
+      context: {},
+      params: {},
+    } as ActionFunctionArgs);
+
+    assertIsDataWithResponseInit(response);
+    expect(response.data).toMatchObject({
+      error: {
+        message:
+          "No hay un proveedor SSO configurado para el dominio de tu organización.",
+      },
+    });
   });
 });

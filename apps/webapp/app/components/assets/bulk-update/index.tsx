@@ -7,6 +7,7 @@
  * @see {@link file://./../../../routes/_layout+/assets.import-update.tsx} Route handler
  */
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { UpdateImportForm } from "./form";
 import Icon from "../../icons/icon";
 import { Button } from "../../shared/button";
@@ -17,15 +18,13 @@ import { Button } from "../../shared/button";
  * and embeds the CSV upload form.
  */
 export const ImportUpdateContent = () => {
+  const { t } = useTranslation();
   const [showInstructions, setShowInstructions] = useState(true);
 
   return (
     <div className="w-full text-left">
-      <h3>Update existing assets</h3>
-      <p>
-        Edit your assets in Excel or Google Sheets, then upload the CSV here.
-        We'll show you exactly what will change before anything is saved.
-      </p>
+      <h3>{t("inventory:updateExistingAssets")}</h3>
+      <p>{t("inventory:updateAssetsIntro")}</p>
 
       {showInstructions ? (
         <>

@@ -20,6 +20,7 @@ import {
   UsersRoundIcon,
   type LucideIcon,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useLoaderData } from "react-router";
 import { UpgradeMessage } from "~/components/marketing/upgrade-message";
 import When from "~/components/when/when";
@@ -29,6 +30,7 @@ import { useCurrentOrganization } from "./use-current-organization";
 import { useUserRoleHelper } from "./user-user-role-helper";
 
 type BaseNavItem = {
+  id: string;
   title: string;
   hidden?: boolean;
   Icon: LucideIcon;
@@ -66,6 +68,7 @@ export type NavItem =
   | ButtonNavItem;
 
 export function useSidebarNavItems() {
+  const { t } = useTranslation();
   const { isAdmin, canUseBookings, subscription, unreadUpdatesCount } =
     useLoaderData<typeof loader>();
   const { isBaseOrSelfService } = useUserRoleHelper();
@@ -80,18 +83,16 @@ export function useSidebarNavItems() {
     return {
       reason: (
         <div>
-          <h5>Disabled</h5>
-          <p>
-            Booking is a premium feature only available for Team workspaces.
-          </p>
+          <h5>{t("navigation:disabled")}</h5>
+          <p>{t("navigation:bookingPremiumOnly")}</p>
 
           <When truthy={!!subscription} fallback={<UpgradeMessage />}>
-            <p>Please switch to your team workspace to access this feature.</p>
+            <p>{t("navigation:switchToTeamWorkspace")}</p>
           </When>
         </div>
       ),
     };
-  }, [canUseBookings, subscription]);
+  }, [canUseBookings, subscription, t]);
 
   /**
    * Personal workspaces can't invite registered users. Rather than hide the
@@ -103,147 +104,171 @@ export function useSidebarNavItems() {
       return false;
     }
 
-    return { reason: "Inviting users is available on Team workspaces" };
-  }, [isPersonalOrganization]);
+    return { reason: t("navigation:inviteTeamOnly") };
+  }, [isPersonalOrganization, t]);
 
   const topMenuItems: NavItem[] = [
     {
+      id: "admin-dashboard",
       type: "child",
-      title: "Admin Dashboard",
+      title: t("navigation:adminDashboard"),
       to: "/admin-dashboard/users",
       Icon: ChartLineIcon,
       hidden: !isAdmin,
     },
     {
+      id: "asset-management",
       type: "label",
-      title: "Asset management",
+      title: t("navigation:assetManagement"),
     },
     {
+      id: "home",
       type: "child",
-      title: "Home",
+      title: t("navigation:home"),
       to: "/home",
       Icon: HomeIcon,
       hidden: isBaseOrSelfService,
     },
     {
+      id: "assets",
       type: "child",
-      title: "Assets",
+      title: t("navigation:assets"),
       to: "/assets",
       Icon: PackageOpenIcon,
     },
     {
+      id: "kits",
       type: "child",
-      title: "Kits",
+      title: t("navigation:kits"),
       to: "/kits",
       Icon: Package,
     },
     {
+      id: "categories",
       type: "child",
-      title: "Categories",
+      title: t("navigation:categories"),
       to: "/categories",
       Icon: BoxesIcon,
       hidden: isBaseOrSelfService,
     },
     {
+      id: "tags",
       type: "child",
-      title: "Tags",
+      title: t("navigation:tags"),
       to: "/tags",
       Icon: TagsIcon,
       hidden: isBaseOrSelfService,
     },
     {
+      id: "locations",
       type: "child",
-      title: "Locations",
+      title: t("navigation:locations"),
       to: "/locations",
       Icon: MapPinIcon,
       hidden: isBaseOrSelfService,
     },
     {
+      id: "audits",
       type: "child",
-      title: "Audits",
+      title: t("navigation:audits"),
       to: "/audits",
       Icon: ClipboardCheckIcon,
     },
     {
+      id: "bookings",
       type: "parent",
-      title: "Bookings",
+      title: t("navigation:bookings"),
       Icon: CalendarRangeIcon,
       disabled: bookingDisabled,
       children: [
         {
-          title: "View Bookings",
+          id: "view-bookings",
+          title: t("navigation:viewBookings"),
           to: "/bookings",
           disabled: bookingDisabled,
         },
         {
-          title: "Calendar",
+          id: "calendar",
+          title: t("navigation:calendar"),
           to: "/calendar",
           disabled: bookingDisabled,
         },
       ],
     },
     {
+      id: "reminders",
       type: "child",
-      title: "Reminders",
+      title: t("navigation:reminders"),
       Icon: AlarmClockIcon,
       hidden: isBaseOrSelfService,
       to: "/reminders",
     },
     {
+      id: "reports",
       type: "child",
-      title: "Reports",
+      title: t("navigation:reports"),
       Icon: FileBarChartIcon,
       hidden: isBaseOrSelfService,
       to: "/reports",
     },
     {
+      id: "organization",
       type: "label",
-      title: "Organization",
+      title: t("navigation:organization"),
       hidden: isBaseOrSelfService,
     },
     {
+      id: "team",
       type: "parent",
-      title: "Team",
+      title: t("navigation:team"),
       Icon: UsersRoundIcon,
       hidden: isBaseOrSelfService,
       children: [
         {
-          title: "Users",
+          id: "users",
+          title: t("navigation:users"),
           to: "/settings/team/users",
           disabled: teamInviteDisabled,
         },
         {
-          title: "Pending invites",
+          id: "pending-invites",
+          title: t("navigation:pendingInvites"),
           to: "/settings/team/invites",
           disabled: teamInviteDisabled,
         },
         {
-          title: "Non-registered members",
+          id: "non-registered-members",
+          title: t("navigation:nonRegisteredMembers"),
           to: "/settings/team/nrm",
         },
       ],
     },
     {
+      id: "workspace-settings",
       type: "parent",
-      title: "Workspace settings",
+      title: t("navigation:workspaceSettings"),
       Icon: SettingsIcon,
       hidden: isBaseOrSelfService,
       children: [
         {
-          title: "General",
+          id: "general",
+          title: t("navigation:general"),
           to: "/settings/general",
         },
         {
-          title: "Bookings",
+          id: "settings-bookings",
+          title: t("navigation:bookings"),
           to: "/settings/bookings",
           hidden: isPersonalOrganization,
         },
         {
-          title: "Custom fields",
+          id: "custom-fields",
+          title: t("navigation:customFields"),
           to: "/settings/custom-fields",
         },
         {
-          title: "Asset models",
+          id: "asset-models",
+          title: t("navigation:assetModels"),
           to: "/settings/asset-models",
         },
       ],
@@ -252,21 +277,24 @@ export function useSidebarNavItems() {
 
   const bottomMenuItems: NavItem[] = [
     {
+      id: "asset-labels",
       type: "child",
-      title: "Asset labels",
+      title: t("navigation:assetLabels"),
       to: `https://store.shelf.nu/?ref=shelf_webapp_sidebar`,
       Icon: QrCodeIcon,
       target: "_blank",
     },
     {
+      id: "qr-scanner",
       type: "child",
-      title: "QR Scanner",
+      title: t("navigation:qrScanner"),
       to: "/scanner",
       Icon: ScanBarcodeIcon,
     },
     {
+      id: "updates",
       type: "button",
-      title: "Updates",
+      title: t("navigation:updates"),
       Icon: BellIcon,
       badge: {
         show: (unreadUpdatesCount || 0) > 0,
@@ -277,8 +305,9 @@ export function useSidebarNavItems() {
       },
     },
     {
+      id: "feedback",
       type: "button",
-      title: "Questions/Feedback",
+      title: t("navigation:feedback"),
       Icon: MessageCircleIcon,
       onClick: () => {
         // Handled by FeedbackNavItem in sidebar-nav.tsx

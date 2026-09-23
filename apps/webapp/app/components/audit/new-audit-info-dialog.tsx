@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { CompassIcon, MapPinIcon, PackageIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogPortal } from "~/components/layout/dialog";
 import { Button } from "~/components/shared/button";
 
 export function NewAuditInfoDialog() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const handleClose = () => setOpen(false);
@@ -11,20 +13,22 @@ export function NewAuditInfoDialog() {
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)}>
-        New Audit
+        {t("audit:newAudit")}
       </Button>
       <DialogPortal>
         <Dialog
           open={open}
           onClose={handleClose}
           className="w-full sm:w-[500px]"
-          title={<h3 className="text-lg font-semibold">Create a New Audit</h3>}
+          title={
+            <h3 className="text-lg font-semibold">
+              {t("audit:createNewAudit")}
+            </h3>
+          }
         >
           <div className="px-6 pb-6">
             <p className="mb-6 text-sm text-gray-600">
-              Audits help you verify your asset inventory by checking that
-              expected assets are in their designated locations. Choose how
-              you'd like to create your audit:
+              {t("audit:newAuditDescription")}
             </p>
 
             <div className="space-y-4">
@@ -36,13 +40,10 @@ export function NewAuditInfoDialog() {
                   </div>
                   <div className="flex-1">
                     <h4 className="mb-1 font-medium text-gray-900">
-                      From Assets list (advanced mode)
+                      {t("audit:fromAssets")}
                     </h4>
                     <p className="mb-3 text-sm text-gray-600">
-                      Select specific assets from your inventory to include in
-                      the audit. Perfect for targeted checks of particular
-                      items. Use the actions menu on the Assets page to get
-                      started.
+                      {t("audit:fromAssetsDescription")}
                     </p>
                     <Button
                       to="/assets"
@@ -50,7 +51,7 @@ export function NewAuditInfoDialog() {
                       size="xs"
                       onClick={handleClose}
                     >
-                      Go to Assets
+                      {t("audit:goToAssets")}
                     </Button>
                   </div>
                 </div>
@@ -64,13 +65,10 @@ export function NewAuditInfoDialog() {
                   </div>
                   <div className="flex-1">
                     <h4 className="mb-1 font-medium text-gray-900">
-                      From Locations
+                      {t("audit:fromLocations")}
                     </h4>
                     <p className="mb-3 text-sm text-gray-600">
-                      Audit the assets across one or more locations. Ideal for
-                      room-by-room or area-based inventory checks. Select the
-                      locations you want on the Locations page, then choose
-                      Actions → Create audit.
+                      {t("audit:fromLocationsDescription")}
                     </p>
                     <Button
                       to="/locations"
@@ -78,7 +76,7 @@ export function NewAuditInfoDialog() {
                       size="xs"
                       onClick={handleClose}
                     >
-                      Go to Locations
+                      {t("audit:goToLocations")}
                     </Button>
                   </div>
                 </div>
@@ -92,12 +90,10 @@ export function NewAuditInfoDialog() {
                   </div>
                   <div className="flex-1">
                     <h4 className="mb-1 font-medium text-gray-900">
-                      From Kits
+                      {t("audit:fromKits")}
                     </h4>
                     <p className="mb-3 text-sm text-gray-600">
-                      Audit the assets across one or more kits. Great for
-                      verifying that kit contents are complete. Select kits on
-                      the Kits page, then choose Actions → Create audit.
+                      {t("audit:fromKitsDescription")}
                     </p>
                     <Button
                       to="/kits"
@@ -105,7 +101,7 @@ export function NewAuditInfoDialog() {
                       size="xs"
                       onClick={handleClose}
                     >
-                      Go to Kits
+                      {t("audit:goToKits")}
                     </Button>
                   </div>
                 </div>

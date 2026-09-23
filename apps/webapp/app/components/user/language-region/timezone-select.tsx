@@ -20,6 +20,7 @@ import {
   PopoverTrigger,
 } from "@radix-ui/react-popover";
 import { ChevronDownIcon, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAutoFocus } from "~/hooks/use-auto-focus";
 import { tw } from "~/utils/tw";
 
@@ -106,6 +107,7 @@ export function TimezoneSelect({
   onChange,
   className,
 }: TimezoneSelectProps) {
+  const { t } = useTranslation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -197,21 +199,25 @@ export function TimezoneSelect({
               // Combobox semantics: DOM focus stays here while the arrow keys
               // move the highlight, announced via aria-activedescendant.
               role="combobox"
-              aria-label="Search time zone"
+              aria-label={t("a11y:searchTimeZone")}
               aria-expanded={isOpen}
               aria-controls={listboxId}
               aria-activedescendant={
                 filtered[selectedIndex] ? getOptionId(selectedIndex) : undefined
               }
               aria-autocomplete="list"
-              placeholder="Search time zone..."
+              placeholder={`${t("a11y:searchTimeZone")}...`}
               className="border-0 px-4 py-2 pl-2 text-sm focus:border-0 focus:ring-0"
               value={searchQuery}
               onChange={handleSearch}
               onKeyDown={handleKeyDown}
             />
           </div>
-          <div id={listboxId} role="listbox" aria-label="Time zone options">
+          <div
+            id={listboxId}
+            role="listbox"
+            aria-label={t("a11y:timeZoneOptions")}
+          >
             {filtered.map((tz, index) => (
               <div
                 key={tz}
@@ -233,7 +239,7 @@ export function TimezoneSelect({
             ))}
             {filtered.length === 0 && (
               <div className="px-4 py-2 text-sm text-gray-500">
-                No time zones found
+                {t("a11y:noTimeZonesFound")}
               </div>
             )}
           </div>

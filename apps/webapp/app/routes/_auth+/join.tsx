@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   LoaderFunctionArgs,
   ActionFunctionArgs,
@@ -15,7 +17,10 @@ import { Button } from "~/components/shared/button";
 import { config } from "~/config/shelf.config";
 import { useSearchParams } from "~/hooks/search-params";
 import { useAutoFocus } from "~/hooks/use-auto-focus";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { ContinueWithEmailForm } from "~/modules/auth/components/continue-with-email-form";
+import { localizeAuthError } from "~/modules/auth/localize-error.server";
 import { signUpWithEmailPass } from "~/modules/auth/service.server";
 import { findUserByEmail } from "~/modules/user/service.server";
 import { appendToMetaTitle } from "~/utils/append-to-meta-title";
@@ -37,18 +42,18 @@ import { validEmail } from "~/utils/misc";
 import { validateNonSSOSignup } from "~/utils/sso.server";
 import { passwordSchema } from "~/utils/zod";
 
-export function loader({ context }: LoaderFunctionArgs) {
-  const title = "Create an account";
-  const subHeading = "Start your journey with Shelf";
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
+  const title = i18n.t("auth:signUp");
+  const subHeading = i18n.t("auth:signupHelp");
   const { disableSignup } = config;
 
   try {
     if (disableSignup) {
       throw new ShelfError({
         cause: null,
-        title: "Signup is disabled",
-        message:
-          "For more information, please contact your workspace administrator.",
+        title: i18n.t("auth:signupDisabled"),
+        message: i18n.t("auth:contactWorkspaceAdmin"),
         label: "User onboarding",
         status: 403,
         shouldBeCaptured: false,
@@ -65,29 +70,36 @@ export function loader({ context }: LoaderFunctionArgs) {
   }
 }
 
-const JoinFormSchema = z
-  .object({
-    email: z
-      .string()
-      .transform((email) => email.toLowerCase())
-      .refine(validEmail, () => ({
-        message: "Please enter a valid email",
-      })),
-    password: passwordSchema(),
-    confirmPassword: passwordSchema(),
-    redirectTo: z.string().optional(),
-  })
-  .superRefine(({ password, confirmPassword }, ctx) => {
-    if (password !== confirmPassword) {
-      return ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Password and confirm password must match",
-        path: ["confirmPassword"],
-      });
-    }
-  });
+function createJoinFormSchema(t: (key: string) => string) {
+  return z
+    .object({
+      email: z
+        .string()
+        .transform((email) => email.toLowerCase())
+        .refine(validEmail, () => ({
+          message: t("auth:invalidEmail"),
+        })),
+      password: passwordSchema(t("auth:passwordTooShort")),
+      confirmPassword: passwordSchema(t("auth:passwordTooShort")),
+      redirectTo: z.string().optional(),
+    })
+    .superRefine(({ password, confirmPassword }, ctx) => {
+      if (password !== confirmPassword) {
+        return ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t("auth:passwordsMustMatch"),
+          path: ["confirmPassword"],
+        });
+      }
+    });
+}
+
+type JoinFormSchema = ReturnType<typeof createJoinFormSchema>;
 
 export async function action({ request }: ActionFunctionArgs) {
+  const language = await resolveRequestLanguage({ request });
+  const i18n = createI18n(language);
+
   try {
     const method = getActionMethod(request);
 
@@ -95,7 +107,7 @@ export async function action({ request }: ActionFunctionArgs) {
       case "POST": {
         const { email, password } = parseData(
           await request.formData(),
-          JoinFormSchema,
+          createJoinFormSchema((key) => i18n.t(key)),
           { shouldBeCaptured: false }
         );
         // Block signup if domain uses SSO
@@ -106,7 +118,7 @@ export async function action({ request }: ActionFunctionArgs) {
         if (existingUser) {
           throw new ShelfError({
             cause: null,
-            message: "User with this Email already exits, login instead",
+            message: i18n.t("auth:accountExists"),
             additionalData: {
               email,
             },
@@ -117,7 +129,7 @@ export async function action({ request }: ActionFunctionArgs) {
         }
 
         // Sign up with the provided email and password
-        await signUpWithEmailPass(email, password);
+        await signUpWithEmailPass(email, password, language);
 
         return redirect(
           `/otp?email=${encodeURIComponent(email)}&mode=confirm_signup`
@@ -132,7 +144,8 @@ export async function action({ request }: ActionFunctionArgs) {
       undefined,
       isZodValidationError(cause)
     );
-    return data(error(reason), { status: reason.status });
+    const localizedReason = localizeAuthError(reason, (key) => i18n.t(key));
+    return data(error(localizedReason), { status: localizedReason.status });
   }
 }
 
@@ -141,7 +154,9 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 ];
 
 export default function Join() {
-  const zo = useZorm("NewQuestionWizardScreen", JoinFormSchema);
+  const { t } = useTranslation();
+  const schema = useMemo(() => createJoinFormSchema((key) => t(key)), [t]);
+  const zo = useZorm("NewQuestionWizardScreen", schema);
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? undefined;
   const navigation = useNavigation();
@@ -159,7 +174,7 @@ export default function Join() {
             <Input
               ref={emailInputRef}
               data-test-id="email"
-              label="Email address"
+              label={t("auth:emailAddress")}
               placeholder="zaans@huisje.com"
               required
               name={zo.fields.email()}
@@ -172,7 +187,7 @@ export default function Join() {
           </div>
 
           <PasswordInput
-            label="Password"
+            label={t("auth:password")}
             placeholder="**********"
             required
             data-test-id="password"
@@ -181,12 +196,12 @@ export default function Join() {
             disabled={disabled}
             inputClassName="w-full"
             error={
-              getValidationErrors<typeof JoinFormSchema>(data?.error)?.password
+              getValidationErrors<JoinFormSchema>(data?.error)?.password
                 ?.message || zo.errors.password()?.message
             }
           />
           <PasswordInput
-            label="Confirm Password"
+            label={t("auth:confirmPassword")}
             placeholder="**********"
             required
             data-test-id="confirmPassword"
@@ -195,9 +210,8 @@ export default function Join() {
             disabled={disabled}
             inputClassName="w-full"
             error={
-              getValidationErrors<typeof JoinFormSchema>(data?.error)
-                ?.confirmPassword?.message ||
-              zo.errors.confirmPassword()?.message
+              getValidationErrors<JoinFormSchema>(data?.error)?.confirmPassword
+                ?.message || zo.errors.confirmPassword()?.message
             }
           />
 
@@ -213,7 +227,7 @@ export default function Join() {
             disabled={disabled}
             width="full"
           >
-            Get Started
+            {t("auth:getStarted")}
           </Button>
         </Form>
         <div className="mt-6">
@@ -223,7 +237,7 @@ export default function Join() {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="bg-white px-2 text-gray-500">
-                {"Or use a One Time Password"}
+                {t("auth:orUseOtp")}
               </span>
             </div>
           </div>
@@ -233,7 +247,7 @@ export default function Join() {
         </div>
         <div className="flex items-center justify-center pt-5">
           <div className="text-center text-sm text-gray-500">
-            {"Already have an account? "}
+            {t("auth:alreadyHaveAccount")}{" "}
             <Button
               variant="link"
               to={{
@@ -241,7 +255,7 @@ export default function Join() {
                 search: searchParams.toString(),
               }}
             >
-              Log in
+              {t("auth:login")}
             </Button>
           </div>
         </div>

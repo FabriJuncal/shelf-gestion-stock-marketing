@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
 import { useScannerCameraId } from "~/hooks/use-scanner-camera-id";
 import { isFormProcessing } from "~/utils/form";
@@ -34,6 +35,7 @@ export function RelinkQrCodeDialog({
   itemLabel = "item",
   actionData,
 }: RelinkQrCodeDialogProps) {
+  const { t } = useTranslation();
   const [currentState, setCurrentState] = useState<CurrentState>("initial");
   const [newQrId, setNewQrId] = useState<string>();
   const [errorMessage, setErrorMessage] = useState("");
@@ -51,7 +53,7 @@ export function RelinkQrCodeDialog({
     type,
   }: OnCodeDetectionSuccessProps) {
     if (type === "barcode") {
-      setErrorMessage("Please scan a QR code, not a barcode.");
+      setErrorMessage(t("inventory:scanQrNotBarcode"));
       return;
     }
 
@@ -62,9 +64,7 @@ export function RelinkQrCodeDialog({
     setNewQrId(qrId);
 
     if (currentQrId === qrId) {
-      setErrorMessage(
-        `The new code you scanned is the same as the current code of the ${itemLabel}. Please scan a different code.`
-      );
+      setErrorMessage(t("inventory:differentQrRequired", { item: itemLabel }));
     }
   }
 
@@ -102,7 +102,7 @@ export function RelinkQrCodeDialog({
           <>
             <When truthy={currentState === "initial"}>
               <div>
-                <h3>Change QR Code</h3>
+                <h3>{t("inventory:changeQrCode")}</h3>
                 <p className="text-gray-600">{itemName}</p>
               </div>
             </When>
@@ -168,24 +168,30 @@ export function RelinkQrCodeDialog({
                 up height when the viewport is short. */}
             <div className="flex shrink-0 items-center justify-center gap-4 p-4">
               <div className="flex-1 truncate text-right">
-                <p className="uppercase text-gray-500">Current code</p>
+                <p className="uppercase text-gray-500">
+                  {t("inventory:currentCode")}
+                </p>
                 <p
                   className="truncate font-medium"
-                  title={currentQrId ? currentQrId : "Not linked yet"}
+                  title={
+                    currentQrId ? currentQrId : t("inventory:notLinkedYet")
+                  }
                 >
-                  {currentQrId ? currentQrId : "Not linked yet"}
+                  {currentQrId ? currentQrId : t("inventory:notLinkedYet")}
                 </p>
               </div>
               <div className="flex items-center justify-center rounded-lg border border-gray-200 p-2.5 shadow-lg">
                 <ArrowRightIcon />
               </div>
               <div className="flex-1 truncate">
-                <p className="uppercase text-gray-500">New code</p>
+                <p className="uppercase text-gray-500">
+                  {t("inventory:newCode")}
+                </p>
                 <p
                   className="truncate font-medium"
-                  title={newQrId ? newQrId : "Scan a QR code to link..."}
+                  title={newQrId ? newQrId : t("inventory:scanQrToLink")}
                 >
-                  {newQrId ? newQrId : "Scan a QR code to link..."}
+                  {newQrId ? newQrId : t("inventory:scanQrToLink")}
                 </p>
               </div>
             </div>
@@ -221,7 +227,7 @@ export function RelinkQrCodeDialog({
                   }
                 }}
               >
-                Rescan
+                {t("inventory:rescan")}
               </Button>
               <Button
                 type="button"
@@ -231,7 +237,7 @@ export function RelinkQrCodeDialog({
                   setCurrentState("qr-selected");
                 }}
               >
-                Link
+                {t("inventory:link")}
               </Button>
             </div>
           </>
@@ -239,12 +245,8 @@ export function RelinkQrCodeDialog({
         <When truthy={currentState === "qr-selected"}>
           <div className="p-6">
             <div className="mb-5">
-              <h3>Change QR code</h3>
-              <p>
-                Are you sure you want to relink the code for{" "}
-                <span className="font-bold">{itemName}</span>? The current code
-                will become unlinked.
-              </p>
+              <h3>{t("inventory:changeQrCode")}</h3>
+              <p>{t("inventory:relinkQrConfirmation", { item: itemName })}</p>
             </div>
 
             <div className="mb-1 flex items-center gap-2.5 rounded border border-gray-200 p-2">
@@ -252,8 +254,12 @@ export function RelinkQrCodeDialog({
                 <ArrowLeftIcon />
               </div>
               <div>
-                <p className="uppercase text-gray-600">Current code</p>
-                <p className="font-medium">{currentQrId ?? "N/A"}</p>
+                <p className="uppercase text-gray-600">
+                  {t("inventory:currentCode")}
+                </p>
+                <p className="font-medium">
+                  {currentQrId ?? t("inventory:notApplicable")}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2.5 rounded border border-gray-200 p-2">
@@ -261,7 +267,9 @@ export function RelinkQrCodeDialog({
                 <ArrowRightIcon />
               </div>
               <div>
-                <p className="uppercase text-gray-600">New code</p>
+                <p className="uppercase text-gray-600">
+                  {t("inventory:newCode")}
+                </p>
                 <p className="font-medium">{newQrId}</p>
               </div>
             </div>
@@ -283,7 +291,7 @@ export function RelinkQrCodeDialog({
                   setErrorMessage("");
                 }}
               >
-                Rescan
+                {t("inventory:rescan")}
               </Button>
               <Form method="post" className="flex-1">
                 <input type="hidden" value={newQrId} name="newQrId" />
@@ -294,7 +302,7 @@ export function RelinkQrCodeDialog({
                   type="submit"
                   disabled={isSubmitting}
                 >
-                  Confirm
+                  {t("common:save")}
                 </Button>
               </Form>
             </div>

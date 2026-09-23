@@ -1,4 +1,5 @@
 import { AssetStatus } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import { StatusFilter } from "~/components/booking/status-filter";
 import DynamicDropdown from "~/components/dynamic-dropdown/dynamic-dropdown";
 import { ChevronRight } from "~/components/icons/library";
@@ -22,6 +23,7 @@ import { ConfigureColumnsDropdown } from "./configure-columns-dropdown";
 import { SavedFilterPresetsControls } from "./saved-filter-presets";
 import { AvailabilityViewToggle } from "./view-toggle";
 
+/** Legacy constant retained for related kit/location routes; their migration is tracked in S04. */
 export const ASSET_SORTING_OPTIONS = {
   title: "Name",
   createdAt: "Date created",
@@ -33,6 +35,12 @@ export function AssetIndexFilters({
 }: {
   disableTeamMemberFilter?: boolean;
 }) {
+  const { t } = useTranslation();
+  const sortingOptions = {
+    title: t("inventory:sortByName"),
+    createdAt: t("inventory:sortByCreatedAt"),
+    updatedAt: t("inventory:sortByUpdatedAt"),
+  } as const;
   /** Used for filtering based on user type */
   const filterParams: string[] = ["category", "tag", "location"];
   if (!disableTeamMemberFilter) {
@@ -58,7 +66,7 @@ export function AssetIndexFilters({
           "right-of-search": (
             <div className="flex items-center gap-2">
               <SortBy
-                sortingOptions={ASSET_SORTING_OPTIONS}
+                sortingOptions={sortingOptions}
                 defaultSortingBy="createdAt"
                 className="flex-1"
               />
@@ -78,7 +86,7 @@ export function AssetIndexFilters({
                 className="block min-w-28 max-w-none font-normal text-gray-600 hover:text-gray-700"
                 type="button"
               >
-                Clear all filters
+                {t("inventory:clearAllFilters")}
               </Button>
               <div className="text-gray-600"> | </div>
             </div>
@@ -87,49 +95,50 @@ export function AssetIndexFilters({
             <DynamicDropdown
               trigger={
                 <div className="flex cursor-pointer items-center gap-2">
-                  Categories{" "}
+                  {t("inventory:categories")}{" "}
                   <ChevronRight className="hidden rotate-90 md:inline" />
                 </div>
               }
               model={{ name: "category", queryKey: "name" }}
-              label="Filter by category"
-              placeholder="Search categories"
+              label={t("inventory:filterByCategory")}
+              placeholder={t("inventory:searchCategories")}
               initialDataKey="categories"
               countKey="totalCategories"
               withoutValueItem={{
                 id: "uncategorized",
-                name: "Uncategorized",
+                name: t("inventory:uncategorized"),
               }}
             />
             <DynamicDropdown
               trigger={
                 <div className="flex cursor-pointer items-center gap-2">
-                  Tags <ChevronRight className="hidden rotate-90 md:inline" />
+                  {t("inventory:tags")}{" "}
+                  <ChevronRight className="hidden rotate-90 md:inline" />
                 </div>
               }
               model={{ name: "tag", queryKey: "name" }}
-              label="Filter by tag"
+              label={t("inventory:filterByTag")}
               initialDataKey="tags"
               countKey="totalTags"
               withoutValueItem={{
                 id: "untagged",
-                name: "Without tag",
+                name: t("inventory:withoutTag"),
               }}
             />
             <DynamicDropdown
               trigger={
                 <div className="flex cursor-pointer items-center gap-2">
-                  Locations{" "}
+                  {t("inventory:locations")}{" "}
                   <ChevronRight className="hidden rotate-90 md:inline" />
                 </div>
               }
               model={{ name: "location", queryKey: "name" }}
-              label="Filter by location"
+              label={t("inventory:filterByLocation")}
               initialDataKey="locations"
               countKey="totalLocations"
               withoutValueItem={{
                 id: "without-location",
-                name: "Without location",
+                name: t("inventory:withoutLocation"),
               }}
               renderItem={({ metadata }) => (
                 <div className="flex items-center gap-2">
@@ -146,7 +155,7 @@ export function AssetIndexFilters({
               <DynamicDropdown
                 trigger={
                   <div className="flex cursor-pointer items-center gap-2">
-                    Custodian{" "}
+                    {t("inventory:custodian")}{" "}
                     <ChevronRight className="hidden rotate-90 md:inline" />
                   </div>
                 }
@@ -158,13 +167,13 @@ export function AssetIndexFilters({
                   custodyPurpose: "custody-filter",
                 }}
                 renderItem={(item) => resolveTeamMemberName(item, true)}
-                label="Filter by custodian"
-                placeholder="Search team members"
+                label={t("inventory:filterByCustodian")}
+                placeholder={t("inventory:searchTeamMembers")}
                 initialDataKey="teamMembers"
                 countKey="totalTeamMembers"
                 withoutValueItem={{
                   id: "without-custody",
-                  name: "Without custody",
+                  name: t("inventory:withoutCustody"),
                 }}
               />
             </When>

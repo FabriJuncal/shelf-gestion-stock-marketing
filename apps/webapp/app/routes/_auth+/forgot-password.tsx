@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -14,6 +16,8 @@ import { Button } from "~/components/shared/button";
 import { db } from "~/database/db.server";
 import { useSearchParams } from "~/hooks/search-params";
 import { useDisabled } from "~/hooks/use-disabled";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { getSupabaseAdmin } from "~/integrations/supabase/client";
 
 import {
@@ -34,44 +38,49 @@ import { Logger } from "~/utils/logger";
 import { validEmail } from "~/utils/misc";
 import { passwordSchema } from "~/utils/zod";
 
-const ForgotPasswordSchema = z.object({
-  email: z
-    .string()
-    .transform((email) => email.toLowerCase())
-    .refine(validEmail, () => ({
-      message: "Please enter a valid email",
-    })),
-});
-
-const OtpSchema = z
-  .object({
-    otp: z.string().min(6, "OTP is required."),
-    email: z.string().transform((email) => email.toLowerCase()),
-    password: passwordSchema("Password is too short. Minimum 8 characters."),
-    confirmPassword: passwordSchema(
-      "Password is too short. Minimum 8 characters."
-    ),
-  })
-  .superRefine(({ password, confirmPassword, otp, email }, ctx) => {
-    if (password !== confirmPassword) {
-      return ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Password and confirm password must match",
-        path: ["confirmPassword"],
-      });
-    }
-
-    return { password, confirmPassword, otp, email };
+function createForgotPasswordSchema(t: (key: string) => string) {
+  return z.object({
+    email: z
+      .string()
+      .transform((email) => email.toLowerCase())
+      .refine(validEmail, () => ({
+        message: t("auth:invalidEmail"),
+      })),
   });
+}
 
-export function loader({ context, request }: LoaderFunctionArgs) {
+function createResetPasswordSchema(t: (key: string) => string) {
+  return z
+    .object({
+      otp: z.string().min(6, t("auth:otpRequired")),
+      email: z.string().transform((email) => email.toLowerCase()),
+      password: passwordSchema(t("auth:passwordTooShort")),
+      confirmPassword: passwordSchema(t("auth:passwordTooShort")),
+    })
+    .superRefine(({ password, confirmPassword, otp, email }, ctx) => {
+      if (password !== confirmPassword) {
+        return ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t("auth:passwordsMustMatch"),
+          path: ["confirmPassword"],
+        });
+      }
+
+      return { password, confirmPassword, otp, email };
+    });
+}
+
+type ResetPasswordSchema = ReturnType<typeof createResetPasswordSchema>;
+
+export async function loader({ context, request }: LoaderFunctionArgs) {
   const searchParams = getCurrentSearchParams(request);
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
 
-  const title = "Forgot password?";
+  const title = i18n.t("auth:forgotPasswordTitle");
   const subHeading =
     searchParams.has("email") && searchParams.get("email") !== ""
-      ? "Step 2 of 2: Enter OTP and your new password"
-      : "Step 1 of 2: Enter your email";
+      ? i18n.t("auth:resetStepTwo")
+      : i18n.t("auth:resetStepOne");
 
   if (context.isAuthenticated) {
     return redirect("/assets");
@@ -82,12 +91,12 @@ export function loader({ context, request }: LoaderFunctionArgs) {
 
 export async function action({ request, context }: ActionFunctionArgs) {
   try {
+    const i18n = createI18n(await resolveRequestLanguage({ request }));
     const { intent } = parseData(
       await readFormData(request.clone()),
       z.object({ intent: z.enum(["request-otp", "confirm-otp"]) }),
       {
-        message:
-          "Invalid request. Please try again. If the issue persists, contact support.",
+        message: i18n.t("auth:invalidRequestSupport"),
         shouldBeCaptured: false,
       }
     );
@@ -96,7 +105,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       case "request-otp": {
         const { email } = parseData(
           await readFormData(request),
-          ForgotPasswordSchema,
+          createForgotPasswordSchema((key) => i18n.t(key)),
           { shouldBeCaptured: false }
         );
 
@@ -169,7 +178,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       case "confirm-otp": {
         const { email, otp, password } = parseData(
           await readFormData(request.clone()),
-          OtpSchema,
+          createResetPasswordSchema((key) => i18n.t(key)),
           { shouldBeCaptured: false }
         );
 
@@ -184,7 +193,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         if (verifyError || !otpData.user || !otpData.session) {
           throw new ShelfError({
             cause: verifyError,
-            message: "Invalid or expired verification code",
+            message: i18n.t("auth:invalidExpiredCode"),
             // The OTP is deliberately NOT included. It is a live
             // account-takeover credential until it expires, and additionalData
             // is written straight to the log line.
@@ -221,7 +230,12 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 ];
 
 export default function ForgotPassword() {
-  const zo = useZorm("ForgotPasswordForm", ForgotPasswordSchema);
+  const { t } = useTranslation();
+  const forgotPasswordSchema = useMemo(
+    () => createForgotPasswordSchema((key) => t(key)),
+    [t]
+  );
+  const zo = useZorm("ForgotPasswordForm", forgotPasswordSchema);
   const actionData = useActionData<typeof action>();
   const [searchParams] = useSearchParams();
   const email = searchParams.get("email") || "";
@@ -235,7 +249,7 @@ export default function ForgotPassword() {
    * their fields — instead of bouncing back to the email step with a generic
    * message. Hard errors (e.g. an invalid OTP) still fall back to the email step.
    */
-  const otpValidationErrors = getValidationErrors<typeof OtpSchema>(
+  const otpValidationErrors = getValidationErrors<ResetPasswordSchema>(
     actionData?.error
   );
 
@@ -246,15 +260,12 @@ export default function ForgotPassword() {
         !email ||
         email === "" ? (
           <div>
-            <p className="mb-4 text-center">
-              Enter your email address and we'll send you a one-time code to
-              reset your password.
-            </p>
+            <p className="mb-4 text-center">{t("auth:resetHelp")}</p>
             <Form ref={zo.ref} method="post" className="space-y-2" replace>
               <input type="hidden" name="intent" value="request-otp" />
               <div>
                 <Input
-                  label="Email address"
+                  label={t("auth:emailAddress")}
                   data-test-id="email"
                   name={zo.fields.email()}
                   type="email"
@@ -272,24 +283,20 @@ export default function ForgotPassword() {
                 type="submit"
                 disabled={disabled}
               >
-                {!disabled ? "Reset password" : "Sending code..."}
+                {!disabled ? t("auth:resetPassword") : t("auth:sendingCode")}
               </Button>
             </Form>
             <p className="mt-2 text-center text-gray-500">
-              Tip: Check your spam folder if you don't see the email within a
-              few minutes.
+              {t("auth:spamFolderTip")}
             </p>
           </div>
         ) : (
           <>
-            <p className="mb-2">
-              We've sent a 6-digit code to{" "}
-              <span className="font-semibold">{email}</span>.
-            </p>
+            <p className="mb-2">{t("auth:codeSent", { email })}</p>
             <ol className="mb-4 list-inside list-decimal">
-              <li>Enter the code from your email</li>
-              <li>Enter your new password</li>
-              <li>Confirm your new password</li>
+              <li>{t("auth:enterEmailCode")}</li>
+              <li>{t("auth:enterNewPassword")}</li>
+              <li>{t("auth:confirmNewPasswordStep")}</li>
             </ol>
             <PasswordResetForm email={email} />
           </>
@@ -297,11 +304,11 @@ export default function ForgotPassword() {
         <div className="pt-4 text-center">
           {email ? (
             <Button variant="link" to={"/forgot-password"}>
-              Request new code
+              {t("auth:requestNewCode")}
             </Button>
           ) : (
             <Button variant="link" to={"/login"}>
-              Back to login
+              {t("auth:backToLogin")}
             </Button>
           )}
         </div>
@@ -311,7 +318,12 @@ export default function ForgotPassword() {
 }
 
 function PasswordResetForm({ email }: { email: string }) {
-  const zoReset = useZorm("ResetPasswordForm", OtpSchema);
+  const { t } = useTranslation();
+  const resetPasswordSchema = useMemo(
+    () => createResetPasswordSchema((key) => t(key)),
+    [t]
+  );
+  const zoReset = useZorm("ResetPasswordForm", resetPasswordSchema);
   const disabled = useDisabled();
   const actionData = useActionData<typeof action>();
 
@@ -320,20 +332,20 @@ function PasswordResetForm({ email }: { email: string }) {
    * when client-side zorm validation is bypassed (disabled JS, modified
    * request, or client/server rule divergence). See CLAUDE.md form pattern.
    */
-  const validationErrors = getValidationErrors<typeof OtpSchema>(
+  const validationErrors = getValidationErrors<ResetPasswordSchema>(
     actionData?.error
   );
 
   // Keep the form mounted for validation errors so field-level messages render;
   // only a hard error (e.g. invalid OTP) falls back to the generic message.
   return !email || email === "" || (actionData?.error && !validationErrors) ? (
-    <div>Something went wrong. Please refresh the page and try again.</div>
+    <div>{t("auth:resetUnexpectedError")}</div>
   ) : (
     <Form method="post" ref={zoReset.ref} className="space-y-2">
       <ShelfOTP error={zoReset.errors.otp()?.message} />
 
       <PasswordInput
-        label="New password"
+        label={t("auth:newPassword")}
         data-test-id="password"
         name={zoReset.fields.password()}
         type="password"
@@ -347,7 +359,7 @@ function PasswordResetForm({ email }: { email: string }) {
         required
       />
       <PasswordInput
-        label="Confirm new password"
+        label={t("auth:confirmNewPassword")}
         data-test-id="confirmPassword"
         name={zoReset.fields.confirmPassword()}
         type="password"
@@ -370,7 +382,7 @@ function PasswordResetForm({ email }: { email: string }) {
         className="w-full "
         disabled={disabled}
       >
-        Confirm password reset
+        {t("auth:confirmPasswordReset")}
       </Button>
     </Form>
   );

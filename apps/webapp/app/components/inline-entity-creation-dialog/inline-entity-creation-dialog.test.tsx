@@ -1,7 +1,21 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import {
+  act,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { I18nextProvider } from "react-i18next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createI18n } from "~/i18n/i18n";
 import InlineEntityCreationDialog from "./inline-entity-creation-dialog";
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <I18nextProvider i18n={createI18n("en")}>{ui}</I18nextProvider>
+  );
+}
 
 // why: Mock NewCategoryForm to avoid router dependencies and test dialog behavior in isolation
 vi.mock("../category/new-category-form", () => ({

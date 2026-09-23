@@ -323,10 +323,13 @@ export async function updateInviteStatus({
   status,
   password,
   formatPrefs,
+  language,
 }: Pick<Invite, "id" | "status"> & {
   password: string;
   /** Browser-detected prefs from the accept-invite action; stamped on new users. */
   formatPrefs?: DetectedFormatPrefs;
+  /** Interface language selected before accepting the invite. */
+  language?: User["language"];
 }) {
   try {
     const invite = await db.invite.findFirst({
@@ -412,6 +415,7 @@ export async function updateInviteStatus({
         lastName,
         createdWithInvite: true,
         formatPrefs,
+        language,
       });
 
       Object.assign(data, {

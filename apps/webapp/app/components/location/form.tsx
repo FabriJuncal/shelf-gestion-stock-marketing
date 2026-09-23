@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { Location } from "@prisma/client";
 import { useAtom, useAtomValue } from "jotai";
+import { useTranslation } from "react-i18next";
 import { useActionData } from "react-router";
 import { useZorm } from "react-zorm";
 import { z } from "zod";
@@ -82,6 +83,7 @@ export const LocationForm = ({
   excludeLocationId,
   onCancel,
 }: Props) => {
+  const { t } = useTranslation();
   const zo = useZorm("NewQuestionWizardScreen", NewLocationFormSchema);
   const fetcher = useFetcherWithReset<{
     success?: boolean;
@@ -171,13 +173,13 @@ export const LocationForm = ({
           truthy={hasOnSuccessFunc}
           fallback={
             <FormRow
-              rowLabel={"Name"}
+              rowLabel={t("inventory:name")}
               className="border-b-0 pb-[10px] pt-0"
               required={zodFieldIsRequired(NewLocationFormSchema.shape.name)}
             >
               <Input
                 ref={nameInputRef}
-                label="Name"
+                label={t("inventory:name")}
                 hideLabel
                 name={zo.fields.name()}
                 disabled={disabled}
@@ -186,7 +188,7 @@ export const LocationForm = ({
                 onChange={hasOnSuccessFunc ? undefined : updateName}
                 className="w-full"
                 defaultValue={name || undefined}
-                placeholder="Storage room"
+                placeholder={t("inventory:storageRoom")}
                 required={zodFieldIsRequired(NewLocationFormSchema.shape.name)}
               />
             </FormRow>
@@ -194,7 +196,7 @@ export const LocationForm = ({
         >
           <Input
             ref={nameInputRef}
-            label="Name"
+            label={t("inventory:name")}
             hideLabel
             name={zo.fields.name()}
             disabled={disabled}
@@ -203,27 +205,21 @@ export const LocationForm = ({
             onChange={hasOnSuccessFunc ? undefined : updateName}
             className="w-full"
             defaultValue={name || undefined}
-            placeholder="Storage room"
+            placeholder={t("inventory:storageRoom")}
             required={zodFieldIsRequired(NewLocationFormSchema.shape.name)}
           />
         </When>
 
         <FormRow
-          rowLabel={"Parent location"}
-          subHeading={
-            <p>
-              Optional. Nest this location under an existing one to build
-              breadcrumbs.
-            </p>
-          }
+          rowLabel={t("inventory:parentLocation")}
+          subHeading={<p>{t("inventory:parentLocationHelp")}</p>}
         >
           <div className="mb-2 block lg:hidden">
             <div className="text-sm font-medium text-gray-700">
-              Parent location
+              {t("inventory:parentLocation")}
             </div>
             <p className="text-xs text-gray-600">
-              Optional. Nest this location under an existing one to build
-              breadcrumbs.
+              {t("inventory:parentLocationHelp")}
             </p>
           </div>
           <LocationSelect
@@ -232,7 +228,7 @@ export const LocationForm = ({
             popoverZIndexClassName={hasOnSuccessFunc ? "z-[10000]" : undefined}
             hideExtraContent={hasOnSuccessFunc}
             fieldName={zo.fields.parentId()}
-            placeholder="No parent"
+            placeholder={t("inventory:noParent")}
             defaultValue={parentId ?? undefined}
             hideCurrentLocationInput
             excludeIds={excludeLocationId ? [excludeLocationId] : undefined}
@@ -242,10 +238,10 @@ export const LocationForm = ({
         <When
           truthy={hasOnSuccessFunc}
           fallback={
-            <FormRow rowLabel={"Main image"}>
+            <FormRow rowLabel={t("inventory:mainImage")}>
               <div>
                 <p className="hidden lg:block">
-                  Accepts PNG, JPG, JPEG, or WebP (max.4 MB)
+                  {t("inventory:imageUploadHelp")}
                 </p>
                 <Input
                   disabled={disabled}
@@ -253,14 +249,14 @@ export const LocationForm = ({
                   name="image"
                   type="file"
                   onChange={validateFile}
-                  label={"Main image"}
+                  label={t("inventory:mainImage")}
                   hideLabel
                   error={imageError}
                   className="mt-2"
                   inputClassName="border-0 shadow-none p-0 rounded-none"
                 />
                 <p className="mt-2 lg:hidden">
-                  Accepts PNG, JPG, JPEG, or WebP (max.4 MB)
+                  {t("inventory:imageUploadHelp")}
                 </p>
               </div>
             </FormRow>
@@ -272,33 +268,25 @@ export const LocationForm = ({
             name="image"
             type="file"
             onChange={validateFile}
-            label={"Main image"}
+            label={t("inventory:mainImage")}
             error={imageError}
             className="mt-2"
             inputClassName="border-0 shadow-none p-0 rounded-none"
           />
-          <p className="hidden lg:block">
-            Accepts PNG, JPG, JPEG, or WebP (max.4 MB)
-          </p>
+          <p className="hidden lg:block">{t("inventory:imageUploadHelp")}</p>
         </When>
 
         <When
           truthy={hasOnSuccessFunc}
           fallback={
             <FormRow
-              rowLabel={"Address"}
-              subHeading={
-                <p>
-                  Will set location’s geo position to address. Make sure to add
-                  an accurate address, to ensure the map location is as accurate
-                  as possible
-                </p>
-              }
+              rowLabel={t("inventory:address")}
+              subHeading={<p>{t("inventory:addressHelp")}</p>}
               className="pt-[10px]"
               required={zodFieldIsRequired(NewLocationFormSchema.shape.address)}
             >
               <Input
-                label="Address"
+                label={t("inventory:address")}
                 hideLabel
                 name={zo.fields.address()}
                 disabled={disabled}
@@ -313,7 +301,7 @@ export const LocationForm = ({
           }
         >
           <Input
-            label="Address"
+            label={t("inventory:address")}
             name={zo.fields.address()}
             disabled={disabled}
             error={zo.errors.address()?.message}
@@ -327,24 +315,19 @@ export const LocationForm = ({
           truthy={hasOnSuccessFunc}
           fallback={
             <FormRow
-              rowLabel="Description"
-              subHeading={
-                <p>
-                  This is the initial object description. It will be shown on
-                  the location page. You can always change it.
-                </p>
-              }
+              rowLabel={t("inventory:description")}
+              subHeading={<p>{t("inventory:locationDescriptionHelp")}</p>}
               required={zodFieldIsRequired(
                 NewLocationFormSchema.shape.description
               )}
             >
               <Input
                 inputType="textarea"
-                label="Description"
+                label={t("inventory:description")}
                 hideLabel
                 name={zo.fields.description()}
                 defaultValue={description || ""}
-                placeholder="Add a description for your location."
+                placeholder={t("inventory:locationDescriptionPlaceholder")}
                 disabled={disabled}
                 data-test-id="locationDescription"
                 className="w-full"
@@ -357,10 +340,10 @@ export const LocationForm = ({
         >
           <Input
             inputType="textarea"
-            label="Description"
+            label={t("inventory:description")}
             name={zo.fields.description()}
             defaultValue={description || ""}
-            placeholder="Add a description for your location."
+            placeholder={t("inventory:locationDescriptionPlaceholder")}
             disabled={disabled}
             data-test-id="locationDescription"
             className="w-full"
@@ -377,7 +360,7 @@ export const LocationForm = ({
         <FormRow className="border-y-0 py-2" rowLabel="">
           <div className="ml-auto">
             <Button type="submit" disabled={disabled}>
-              {disabled ? <Spinner /> : "Save"}
+              {disabled ? <Spinner /> : t("common:save")}
             </Button>
           </div>
         </FormRow>
@@ -405,39 +388,54 @@ const Actions = ({
           variant="secondary"
           disabled={disabled}
         >
-          Cancel
+          <TranslatedCancel />
         </Button>
       ) : (
         <Button to={referer ?? ".."} variant="secondary" disabled={disabled}>
-          Cancel
+          <TranslatedCancel />
         </Button>
       )}
       <AddAnother disabled={disabled} />
     </ButtonGroup>
 
-    <Button type="submit" disabled={disabled}>
-      Save
-    </Button>
+    <SaveButton disabled={disabled} />
   </>
 );
 
-const AddAnother = ({ disabled }: { disabled: boolean }) => (
-  <TooltipProvider delayDuration={100}>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="submit"
-          variant="secondary"
-          disabled={disabled}
-          name="addAnother"
-          value="true"
-        >
-          Add another
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">
-        <p className="text-sm">Save the location and add a new one</p>
-      </TooltipContent>
-    </Tooltip>
-  </TooltipProvider>
-);
+const TranslatedCancel = () => {
+  const { t } = useTranslation();
+  return <>{t("common:cancel")}</>;
+};
+
+const SaveButton = ({ disabled }: { disabled: boolean }) => {
+  const { t } = useTranslation();
+  return (
+    <Button type="submit" disabled={disabled}>
+      {t("common:save")}
+    </Button>
+  );
+};
+
+const AddAnother = ({ disabled }: { disabled: boolean }) => {
+  const { t } = useTranslation();
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={disabled}
+            name="addAnother"
+            value="true"
+          >
+            {t("inventory:addAnother")}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p className="text-sm">{t("inventory:addAnotherLocationHelp")}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};

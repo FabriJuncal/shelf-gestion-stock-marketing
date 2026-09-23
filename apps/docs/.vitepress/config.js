@@ -69,6 +69,7 @@ export default {
         collapsed: false,
         items: [
           { text: "Supabase Setup", link: "/supabase-setup" },
+          { text: "Resend SMTP", link: "/resend-smtp" },
           { text: "Local Development", link: "/local-development" },
           { text: "Deployment", link: "/deployment" },
           { text: "Docker Setup", link: "/docker" },

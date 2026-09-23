@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import type {
   ActionFunctionArgs,
@@ -11,7 +12,14 @@ import { Button } from "~/components/shared/button";
 import { Spinner } from "~/components/shared/spinner";
 import { config } from "~/config/shelf.config";
 import { useSearchParams } from "~/hooks/search-params";
+import { createI18n } from "~/i18n/i18n";
+import {
+  reconcileLanguageWithSupabase,
+  withLanguageSyncStatus,
+} from "~/i18n/language-sync.server";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { supabaseClient } from "~/integrations/supabase/client";
+import { localizeAuthError } from "~/modules/auth/localize-error.server";
 import { refreshAccessToken } from "~/modules/auth/service.server";
 import { setSelectedOrganizationIdCookie } from "~/modules/organization/context.server";
 import {
@@ -22,7 +30,7 @@ import { appendToMetaTitle } from "~/utils/append-to-meta-title";
 import { createSSOFormData } from "~/utils/auth";
 import { detectFormatPrefsForPersistence } from "~/utils/client-hints";
 import { setCookie } from "~/utils/cookies.server";
-import { makeShelfError, notAllowedMethod, ShelfError } from "~/utils/error";
+import { notAllowedMethod, ShelfError } from "~/utils/error";
 import {
   payload,
   error,
@@ -36,36 +44,40 @@ import { resolveUserAndOrgForSsoCallback } from "~/utils/sso.server";
  * Schema for handling OAuth callback data with improved groups handling
  * Ensures groups are always an array or empty array, regardless of input format
  */
-const CallbackSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  // Transform groups to either parse JSON string array or return empty array
-  groups: z
-    .union([
-      z.string().transform((str) => {
-        try {
-          const parsed = JSON.parse(str);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      }),
-      z.array(z.string()),
-    ])
-    .default([]),
-  refreshToken: z.string().min(1),
-  redirectTo: z.string().optional(),
-  // Contact information fields
-  phone: z.string().optional(),
-  streetAddress: z.string().optional(),
-  city: z.string().optional(),
-  stateProvince: z.string().optional(),
-  postalCode: z.string().optional(),
-  country: z.string().optional(),
-});
+function createCallbackSchema(t: (key: string) => string) {
+  return z.object({
+    firstName: z.string().min(1, t("auth:firstNameRequired")),
+    lastName: z.string().min(1, t("auth:lastNameRequired")),
+    // Transform groups to either parse JSON string array or return empty array
+    groups: z
+      .union([
+        z.string().transform((str) => {
+          try {
+            const parsed = JSON.parse(str);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        }),
+        z.array(z.string()),
+      ])
+      .default([]),
+    refreshToken: z.string().min(1),
+    redirectTo: z.string().optional(),
+    // Contact information fields
+    phone: z.string().optional(),
+    streetAddress: z.string().optional(),
+    city: z.string().optional(),
+    stateProvince: z.string().optional(),
+    postalCode: z.string().optional(),
+    country: z.string().optional(),
+  });
+}
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const { disableSSO } = config;
+  const language = await resolveRequestLanguage({ request });
+  const i18n = createI18n(language);
   try {
     /**
      * Currently the only reason to use oauth/callback is for SSO reasons.
@@ -74,9 +86,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
     if (disableSSO) {
       throw new ShelfError({
         cause: null,
-        title: "SSO is disabled",
-        message:
-          "For more information, please contact your workspace administrator.",
+        title: i18n.t("auth:ssoDisabled"),
+        message: i18n.t("auth:contactWorkspaceAdmin"),
         label: "User onboarding",
         status: 403,
         shouldBeCaptured: false,
@@ -99,7 +110,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
           stateProvince,
           postalCode,
           country,
-        } = parseData(await request.formData(), CallbackSchema);
+        } = parseData(
+          await request.formData(),
+          createCallbackSchema((key) => i18n.t(key))
+        );
 
         // We should not trust what is sent from the client
         // https://github.com/rphlmr/supa-fly-stack/issues/45
@@ -127,23 +141,36 @@ export async function action({ request, context }: ActionFunctionArgs) {
         // callbacks, which don't render ClientHintCheck first — so the "UTC"
         // fallback is never stamped permanently (the lazy backfill fills it).
         const formatPrefs = detectFormatPrefsForPersistence(request);
-        const { org } = await resolveUserAndOrgForSsoCallback({
+        const { org, user } = await resolveUserAndOrgForSsoCallback({
           authSession,
           firstName,
           lastName,
           groups,
           contactInfo,
           formatPrefs,
+          language,
         });
+        const languageSyncStatus = await reconcileLanguageWithSupabase(
+          authSession.userId,
+          user.language
+        );
 
         // Set the auth session and redirect to the assets page
         context.setSession(authSession);
 
         // If org exists (SCIM SSO case), redirect to that org
         if (org?.id) {
-          return redirect(safeRedirect(redirectTo || "/assets"), {
-            headers: [setCookie(await setSelectedOrganizationIdCookie(org.id))],
-          });
+          return redirect(
+            withLanguageSyncStatus(
+              safeRedirect(redirectTo || "/assets"),
+              languageSyncStatus
+            ),
+            {
+              headers: [
+                setCookie(await setSelectedOrganizationIdCookie(org.id)),
+              ],
+            }
+          );
         }
 
         // Pure SSO case — check if the SSO user has any team orgs
@@ -161,23 +188,34 @@ export async function action({ request, context }: ActionFunctionArgs) {
         );
 
         if (isSSO && !hasTeamOrgs) {
-          return redirect("/sso-pending-assignment");
+          return redirect(
+            withLanguageSyncStatus(
+              "/sso-pending-assignment",
+              languageSyncStatus
+            )
+          );
         }
 
-        return redirect(safeRedirect(redirectTo || "/assets"));
+        return redirect(
+          withLanguageSyncStatus(
+            safeRedirect(redirectTo || "/assets"),
+            languageSyncStatus
+          )
+        );
       }
     }
 
     throw notAllowedMethod(method);
   } catch (cause) {
-    const reason = makeShelfError(cause);
+    const reason = localizeAuthError(cause, (key) => i18n.t(key));
     return data(error(reason), { status: reason.status });
   }
 }
 
-export function loader({ context }: LoaderFunctionArgs) {
-  const title = "Signing in via SSO";
-  const subHeading = "Please wait while we connect your account";
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
+  const title = i18n.t("auth:signingInSso");
+  const subHeading = i18n.t("auth:connectingAccount");
 
   if (context.isAuthenticated) {
     return redirect("/assets");
@@ -191,6 +229,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 ];
 
 export default function LoginCallback() {
+  const { t } = useTranslation();
   const fetcher = useFetcher<typeof action>();
   const { data } = fetcher;
   const [searchParams] = useSearchParams();
@@ -249,7 +288,7 @@ export default function LoginCallback() {
             <div className="text-sm text-error-500">{data.error.message}</div>
           )}
           <Button to="/" className="mt-4">
-            Back to login
+            {t("auth:backToLogin")}
           </Button>
         </div>
       ) : (

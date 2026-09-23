@@ -11,6 +11,7 @@
  * @see {@link file://../utils/date-format.ts} formatDate — the pure formatter
  */
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import type {
   DateFormatOptions,
@@ -38,17 +39,27 @@ export type BoundDateFormatter = {
  */
 export function useDateFormatter(): BoundDateFormatter {
   const prefs = useFormatPrefs();
+  const { i18n } = useTranslation();
+  const displayLocale = i18n.resolvedLanguage ?? i18n.language;
 
   return useMemo(
     () => ({
       prefs,
       formatDate: (value: string | Date, opts?: DateFormatOptions) =>
-        formatDatePure(value, prefs, opts),
+        formatDatePure(value, prefs, { ...opts, displayLocale }),
       formatTime: (value: string | Date, opts?: DateFormatOptions) =>
-        formatDatePure(value, prefs, { ...opts, onlyTime: true }),
+        formatDatePure(value, prefs, {
+          ...opts,
+          displayLocale,
+          onlyTime: true,
+        }),
       formatDateTime: (value: string | Date, opts?: DateFormatOptions) =>
-        formatDatePure(value, prefs, { ...opts, includeTime: true }),
+        formatDatePure(value, prefs, {
+          ...opts,
+          displayLocale,
+          includeTime: true,
+        }),
     }),
-    [prefs]
+    [displayLocale, prefs]
   );
 }

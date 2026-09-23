@@ -25,9 +25,11 @@
 
 import { useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
+import { enUS, es } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import type { DateRange, Matcher } from "react-day-picker";
 import { DayPicker } from "react-day-picker";
+import { useTranslation } from "react-i18next";
 import "react-day-picker/style.css";
 
 import { useDateFormatter } from "~/hooks/use-date-formatter";
@@ -98,7 +100,7 @@ export function DateRangePicker({
   onChange,
   startName,
   endName,
-  placeholder = "Select start and end date",
+  placeholder,
   min,
   max,
   disabled = false,
@@ -106,6 +108,10 @@ export function DateRangePicker({
   className,
 }: DateRangePickerProps) {
   const { formatDate, prefs } = useDateFormatter();
+  const { i18n, t } = useTranslation();
+  const displayLanguage = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const calendarLocale = displayLanguage.startsWith("es") ? es : enUS;
+  const resolvedPlaceholder = placeholder ?? t("common:selectStartEndDate");
   const [open, setOpen] = useState(false);
 
   const from = value?.from;
@@ -137,7 +143,7 @@ export function DateRangePicker({
   } else if (from) {
     triggerLabel = `${formatDate(dateToWire(from))} – …`;
   } else {
-    triggerLabel = placeholder;
+    triggerLabel = resolvedPlaceholder;
   }
 
   // Stable id linking the trigger to its error message via aria-describedby.
@@ -211,6 +217,7 @@ export function DateRangePicker({
             <style>{RDP_STYLE}</style>
             <DayPicker
               mode="range"
+              locale={calendarLocale}
               numberOfMonths={2}
               captionLayout="dropdown"
               {...calendarBounds()}

@@ -37,6 +37,8 @@ import type { HeaderData } from "~/components/layout/header/types";
 import { Overrides } from "~/components/working-hours/overrides/overrides";
 import { EnableWorkingHoursForm } from "~/components/working-hours/toggle-working-hours-form";
 import { WeeklyScheduleForm } from "~/components/working-hours/weekly-schedule-form";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { scheduleExpiryArchiveForExistingReservations } from "~/modules/booking/service.server";
 import {
   getBookingSettingsForOrganization,
@@ -100,7 +102,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     ]);
 
     const header: HeaderData = {
-      title: "Bookings settings",
+      title: createI18n(await resolveRequestLanguage({ request })).t(
+        "settings:bookingSettings"
+      ),
     };
 
     return payload({

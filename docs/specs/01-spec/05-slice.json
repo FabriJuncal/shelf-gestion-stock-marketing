@@ -1,0 +1,104 @@
+{
+  "slice_id": "05-slice",
+  "slice_number": "05",
+  "title": "Reservas, calendarios y auditorías",
+  "status": "pending",
+  "objective": "Completar recorridos de reserva y auditoría con idioma consistente.",
+  "problem": "Los calendarios, estados y mensajes específicos de estos flujos requieren localización adicional al inventario.",
+  "value_outcome": "El usuario crea una reserva, registra entrega/devolución y consulta una auditoría con controles y resultados localizados.",
+  "scope_summary": "Módulos operativos temporales: reservas, disponibilidad, calendarios y auditorías; conservar reglas e instantes.",
+  "scope": {
+    "includes": [
+      "Reservas: listas, detalles, formularios, disponibilidad, entrega, devolución y estados.",
+      "Calendarios utilizados en reservas: controles, días/meses y textos de eventos de sistema.",
+      "Auditorías: listas, creación, detalle, escaneo, estados, resultados y actividad de sistema.",
+      "Errores y avisos de estos recorridos en idioma de petición."
+    ],
+    "excludes": [
+      "Cambiar reglas de conflictos, vencimientos, disponibilidad, auditoría o permisos.",
+      "Traducir texto libre de títulos/comentarios.",
+      "Cambiar protocolos ICS o exportaciones; su compatibilidad se verifica en 06.",
+      "Correos derivados de reservas/auditorías; se localizan en 06."
+    ]
+  },
+  "actors": [
+    "Usuario con permisos de reservas",
+    "Usuario con permisos de auditoría"
+  ],
+  "preconditions": [
+    "Slices 03 y 04 disponibles.",
+    "Datos de prueba y funcionalidades correspondientes habilitadas en entorno de prueba."
+  ],
+  "inputs": [
+    "Idioma, formatos regionales resueltos y catálogos.",
+    "Reservas/auditorías de prueba y sus estados existentes."
+  ],
+  "outputs": [
+    "Controles y mensajes bilingües de reservas/auditorías.",
+    "Evidencia de conservación de fechas y reglas en recorridos representativos."
+  ],
+  "workflow": [
+    {
+      "step": 1,
+      "name": "Localizar reservas",
+      "description": "Convertir formularios, estados y acciones con glosario; preservar valores internos."
+    },
+    {
+      "step": 2,
+      "name": "Localizar calendarios",
+      "description": "Configurar locale de presentación y respetar zona horaria/inicio de semana/horas elegidos."
+    },
+    {
+      "step": 3,
+      "name": "Localizar auditorías",
+      "description": "Convertir vistas y mensajes de escaneo/resultado conservando reglas."
+    },
+    {
+      "step": 4,
+      "name": "Validar recorridos",
+      "description": "Comprobar una reserva y una auditoría, incluyendo un error funcional representativo."
+    }
+  ],
+  "business_rules": [
+    "RF-06 y RF-07 aplican a estos módulos.",
+    "Fechas límite, instantes y disponibilidad no dependen del idioma.",
+    "Traducir etiquetas de estados, no los estados internos.",
+    "No alterar títulos/notas libres ni resultados numéricos."
+  ],
+  "validations": [
+    "Recorrido dirigido de reserva y entrega/devolución en ambos idiomas; misma operación produce los mismos estados.",
+    "Una validación de disponibilidad/fechas muestra mensaje localizado conservando la decisión existente.",
+    "Auditoría representativa con escaneo/resultado y controles traducidos.",
+    "Prueba de adaptación de calendario con preferencias explícitas y fecha cercana a cambio de día si se modifica ese formateo."
+  ],
+  "error_cases": [
+    "Fecha inválida o activo no disponible: traducción de la explicación sin modificar validación.",
+    "Funciones deshabilitadas siguen sin habilitarse por cambiar idioma.",
+    "Nombres de eventos introducidos por usuarios permanecen literales."
+  ],
+  "acceptance_criteria": [
+    "05-AC1: recorridos de reservas y auditorías inventariados funcionan en en/es.",
+    "05-AC2: calendarios localizan texto y conservan zona, inicio de semana, hora y fecha guardados.",
+    "05-AC3: resultado de reserva/auditoría y restricciones son independientes del idioma.",
+    "05-AC4: errores representativos y textos accesibles están traducidos sin alterar contenido libre."
+  ],
+  "dependencies": {
+    "functional": ["Activos/kits y formatos compartidos disponibles."],
+    "technical": [
+      "apps/webapp/app/routes/_layout+/bookings*",
+      "apps/webapp/app/routes/_layout+/audits*",
+      "apps/webapp/app/components/booking/",
+      "apps/webapp/app/modules/booking/",
+      "apps/webapp/app/modules/audit/"
+    ],
+    "external": [],
+    "depends_on_slices": ["03-slice", "04-slice"]
+  },
+  "implementation_order": 5,
+  "slicing_rationale": "Separa flujos temporales que requieren verificar calendarios/estados, sin repetir la revisión de inventario.",
+  "risks": [
+    "Un calendario puede usar su locale por defecto aunque el resto de la interfaz esté traducida.",
+    "La localización debe preservar instantes y no cambiar interpretación de inputs de fecha."
+  ],
+  "open_questions": []
+}

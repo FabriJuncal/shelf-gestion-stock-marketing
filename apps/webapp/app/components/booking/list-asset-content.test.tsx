@@ -1,13 +1,21 @@
 import type { ReactNode } from "react";
 import { OrganizationRoles } from "@prisma/client";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { I18nextProvider } from "react-i18next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createI18n } from "~/i18n/i18n";
 import type { PartialCheckinDetailsType } from "~/modules/booking/service.server";
 import type { AssetWithBooking } from "~/routes/_layout+/bookings.$bookingId.overview.manage-assets";
 import { BADGE_COLORS } from "~/utils/badge-colors";
 import ListAssetContent from "./list-asset-content";
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <I18nextProvider i18n={createI18n("en")}>{ui}</I18nextProvider>
+  );
+}
 
 const {
   assetStatusBadgeMock,

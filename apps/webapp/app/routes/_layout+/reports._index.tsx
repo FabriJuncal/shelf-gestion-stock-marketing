@@ -10,6 +10,7 @@
 import type React from "react";
 import * as LucideIcons from "lucide-react";
 import { Lock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { data, Link, useLoaderData } from "react-router";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 
@@ -48,10 +49,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   const reportsByCategory = getReportsByCategory();
 
   // Standard header object for app Header component
-  const header = {
-    title: "Reports",
-    subHeading: "Track and analyze your asset management operations",
-  };
+  const header = { title: "Reports", subHeading: "" };
 
   return data({
     header,
@@ -63,6 +61,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
 export default function ReportsIndex() {
   const { reportsByCategory, categories } = useLoaderData<typeof loader>();
+  const { t } = useTranslation();
 
   // Filter to only show categories with reports
   const visibleCategories = Object.entries(reportsByCategory).filter(
@@ -75,7 +74,10 @@ export default function ReportsIndex() {
   return (
     <>
       {/* Standard app header - gets title/subHeading from loader data */}
-      <Header />
+      <Header
+        title={t("reports:title")}
+        subHeading={t("reports:description")}
+      />
 
       {/* Content area matching app patterns */}
       <ListContentWrapper>
@@ -109,6 +111,7 @@ export default function ReportsIndex() {
 }
 
 function ReportCard({ report }: { report: ReportDefinition }) {
+  const { t } = useTranslation();
   // Dynamically get the icon from Lucide
   const IconComponent =
     (
@@ -159,7 +162,7 @@ function ReportCard({ report }: { report: ReportDefinition }) {
         <div className="absolute right-3 top-3">
           <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
             <Lock className="size-2.5" />
-            Coming soon
+            {t("reports:comingSoon")}
           </span>
         </div>
       )}

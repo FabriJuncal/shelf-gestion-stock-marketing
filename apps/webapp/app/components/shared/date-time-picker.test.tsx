@@ -32,6 +32,24 @@ const mockPrefs = vi.hoisted(() => ({
     timeZone: "Europe/London",
   },
 }));
+const mockLanguage = vi.hoisted(() => ({ current: "en" }));
+
+// why: these tests isolate date parsing and wire contracts from the root i18n
+// provider. The language stays English here; Spanish calendar behavior is
+// covered by the localized provider integration path.
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    i18n: {
+      language: mockLanguage.current,
+      resolvedLanguage: mockLanguage.current,
+    },
+    t: (key: string) =>
+      ({
+        "common:clear": "Clear",
+        "common:pleaseEnterValidDate": "Please enter a valid date",
+      })[key] ?? key,
+  }),
+}));
 
 vi.mock("~/hooks/use-date-formatter", () => ({
   useDateFormatter: () => ({
@@ -47,6 +65,7 @@ vi.mock("~/hooks/use-date-formatter", () => ({
 // test can't leak into the next.
 afterEach(() => {
   mockPrefs.current.dateFormat = "DD_MM_YYYY";
+  mockLanguage.current = "en";
 });
 
 describe("wire helpers", () => {
@@ -149,6 +168,19 @@ describe("DateTimePicker", () => {
     render(<DateTimePicker name="date" mode="date" label="Date" />);
     const text = document.querySelector<HTMLInputElement>('input[type="text"]');
     expect(text?.placeholder).toBe("e.g. Jul 24, 2026");
+  });
+
+  it("uses the Spanish locale for month-name input while preserving the wire", () => {
+    mockLanguage.current = "es";
+    mockPrefs.current.dateFormat = "DD_MMM_YYYY";
+    render(<DateTimePicker name="date" value="2026-07-22" />);
+
+    const text = document.querySelector<HTMLInputElement>('input[type="text"]');
+    const hidden = document.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="date"]'
+    );
+    expect(text?.value).toBe("22 jul 2026");
+    expect(hidden?.value).toBe("2026-07-22");
   });
 
   it("shows the selected date in the typeable input using the workspace format", () => {

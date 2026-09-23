@@ -17,6 +17,7 @@
 
 import type { ChangeEvent } from "react";
 import { useEffect, useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import AuditTeamMemberSelector from "~/components/audit/audit-team-member-selector";
@@ -97,6 +98,7 @@ export function StartAuditDialogContent({
   dueDateError,
   assigneeError,
 }: StartAuditDialogContentProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isNavigating = useDisabled();
   const formDisabled = disabled || isNavigating;
@@ -127,7 +129,7 @@ export function StartAuditDialogContent({
         <div className="py-4 pr-6">
           <Input
             name={nameField}
-            label="Audit name"
+            label={t("audit:auditName")}
             placeholder="Quarterly warehouse audit"
             error={nameError}
             required
@@ -137,8 +139,8 @@ export function StartAuditDialogContent({
 
           <Input
             name={descriptionField}
-            label="Description"
-            placeholder="Add context that will help auditors (optional)."
+            label={t("audit:description")}
+            placeholder={t("audit:auditDescriptionPlaceholder")}
             inputType="textarea"
             rows={5}
             maxLength={AUDIT_DESCRIPTION_MAX_LENGTH}

@@ -1,10 +1,13 @@
+import type { ReactNode } from "react";
 import type { Booking } from "@prisma/client";
 import { BookingStatus } from "@prisma/client";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { I18nextProvider } from "react-i18next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AvailabilityLabel } from "~/components/booking/availability-label";
+import { createI18n } from "~/i18n/i18n";
 import type { AssetWithBooking } from "~/routes/_layout+/bookings.$bookingId.overview.manage-assets";
 import { hasAssetBookingConflicts } from "~/modules/booking/helpers";
 import { useLoaderData } from "react-router";
@@ -32,6 +35,12 @@ vi.mock("~/modules/booking/helpers", () => ({
 
 const useLoaderDataMock = vi.mocked(useLoaderData);
 const hasAssetBookingConflictsMock = vi.mocked(hasAssetBookingConflicts);
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <I18nextProvider i18n={createI18n("en")}>{ui}</I18nextProvider>
+  );
+}
 
 function createAsset(
   overrides: Partial<AssetWithBooking> = {}

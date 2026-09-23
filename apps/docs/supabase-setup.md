@@ -93,9 +93,24 @@ SUPABASE_SERVICE_ROLE="your-service-role-key"
 
 > 💡 **Why this is important**: If the OTP length is not set to 6, users won't be able to sign up or log in, as the application only accepts 6-digit codes.
 
-### Setup Email Templates for OTP
+### Setup bilingual Email Templates for OTP
 
-Shelf uses One-Time Passwords (OTP) instead of magic links. Update the email templates:
+Shelf uses One-Time Passwords (OTP) instead of magic links. The versioned
+English/Spanish sources and rollback procedure live in
+`supabase/templates/auth/README.md`.
+They select the language from
+<code>&#123;&#123; .Data.language &#125;&#125;</code> and fall back to English.
+
+> **Hosted-project requirement:** New Free-plan projects that use Supabase's
+> default SMTP may not allow custom Auth templates. Configure custom SMTP or use
+> a project/plan that supports template customization before applying these
+> files.
+
+For this deployment, Resend was selected and remains pending. Follow the
+[Resend SMTP runbook](./resend-smtp.md) for domain verification, secret handling,
+Supabase templates, Vercel variables, validation and rollback.
+
+Update the email templates:
 
 1. **Go to Authentication** → **Email Templates**
 2. **Update each template** with the content below:
@@ -103,58 +118,30 @@ Shelf uses One-Time Passwords (OTP) instead of magic links. Update the email tem
 <details>
 <summary><strong>📧 Confirm Signup Template</strong> (click to expand)</summary>
 
-Replace the entire email content with:
-
-```html
-<p>
-  To confirm your account, please use the following One Time Password (OTP):
-</p>
-<h2><b>{{ .Token }}</b></h2>
-<p>
-  Don't share this OTP with anyone. Our customer service team will never ask you
-  for your password, OTP, credit card, or banking info. We hope to see you again
-  soon.
-</p>
-```
+Replace the subject and body with the values in
+`supabase/templates/auth/README.md` and `supabase/templates/auth/confirmation.html`.
 
 </details>
 
 <details>
 <summary><strong>🔐 Magic Link Template</strong> (click to expand)</summary>
 
-Replace the entire email content with:
-
-```html
-<p>To authenticate, please use the following One Time Password (OTP):</p>
-<h2><b>{{ .Token }}</b></h2>
-<p>
-  Don't share this OTP with anyone. Our customer service team will never ask you
-  for your password, OTP, credit card, or banking info. We hope to see you again
-  soon.
-</p>
-```
+Replace the subject and body with the values in
+`supabase/templates/auth/README.md` and `supabase/templates/auth/magic-link.html`.
 
 </details>
 
 <details>
 <summary><strong>🔄 Reset Password Template</strong> (click to expand)</summary>
 
-Replace the entire email content with:
-
-```html
-<h2>Reset Password</h2>
-<p>To reset your password, please use the following (OTP):</p>
-<h2><b>{{ .Token }}</b></h2>
-<p>
-  Don't share this OTP with anyone. Our customer service team will never ask you
-  for your password, OTP, credit card, or banking info. We hope to see you again
-  soon.
-</p>
-```
+Replace the subject and body with the values in
+`supabase/templates/auth/README.md` and `supabase/templates/auth/recovery.html`.
 
 </details>
 
-3. **Click "Save"** for each template after updating
+3. **Click "Save"** for each template after updating.
+4. Run the English/Spanish controlled-email checks from the versioned procedure;
+   do not consider the setup complete from a dashboard save alone.
 
 ---
 

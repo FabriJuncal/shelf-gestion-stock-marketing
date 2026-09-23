@@ -1,11 +1,11 @@
 import type React from "react";
-import { useReducer } from "react";
+import { useMemo, useReducer } from "react";
 import type { Currency } from "@prisma/client";
 import { CheckIcon, UserIcon, UsersIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useNavigation } from "react-router";
 import { Form } from "~/components/custom-form";
 import type { PriceWithProduct } from "~/components/subscription/prices";
-import { AUDIT_ADDON, BARCODE_ADDON } from "~/config/addon-copy";
 import { config } from "~/config/shelf.config";
 import { formatCurrency } from "~/utils/currency";
 import { isFormProcessing } from "~/utils/form";
@@ -69,11 +69,11 @@ function choosePurposeReducer(
   }
 }
 
-const fmtPrice = (amountInCents: number, currency: string) =>
+const fmtPrice = (amountInCents: number, currency: string, locale: string) =>
   formatCurrency({
     value: amountInCents / 100,
     currency: currency as Currency,
-    locale: "en-US",
+    locale,
   });
 
 type AddonPrices = {
@@ -94,7 +94,9 @@ const PLAN_ICONS: Record<SignupPlan, React.ReactNode> = {
   ),
 };
 
-const PLAN_DETAILS: Record<
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+function getPlanDetails(t: Translate): Record<
   SignupPlan,
   {
     title: string;
@@ -106,27 +108,30 @@ const PLAN_DETAILS: Record<
     ctaLabel: string;
     href: string;
   }
-> = {
-  personal: {
-    title: "Personal",
-    description:
-      "For one person. You won't be able to invite teammates or use bookings. Includes 3 custom fields and branded QR labels.",
-    chip: "Free",
-    helper: "Personal workspaces are free and ready to use immediately.",
-    analytics: "cta-start-personal",
-    ctaLabel: "Start using Shelf",
-    href: "/assets",
-  },
-  team: {
-    title: "Team",
-    description: `Invite teammates, assign custody, and manage bookings together. Includes a ${config.freeTrialDays}-day free trial. No credit card required.`,
-    chip: `${config.freeTrialDays}-day trial`,
-    badge: "Recommended",
-    analytics: "cta-next-team",
-    ctaLabel: "Next: Select a plan",
-    href: "/select-plan",
-  },
-};
+> {
+  return {
+    personal: {
+      title: t("welcome:personal"),
+      description: t("welcome:personalDescription"),
+      chip: t("welcome:free"),
+      helper: t("welcome:personalHelper"),
+      analytics: "cta-start-personal",
+      ctaLabel: t("welcome:startUsingShelf"),
+      href: "/assets",
+    },
+    team: {
+      title: t("welcome:team"),
+      description: t("welcome:teamDescription", {
+        days: config.freeTrialDays,
+      }),
+      chip: t("welcome:dayTrial", { days: config.freeTrialDays }),
+      badge: t("welcome:recommended"),
+      analytics: "cta-next-team",
+      ctaLabel: t("welcome:nextSelectPlan"),
+      href: "/select-plan",
+    },
+  };
+}
 
 /**
  * Onboarding plan picker (Personal vs Team) shown on `/welcome`.
@@ -151,6 +156,11 @@ export function ChoosePurpose({
   defaultSelectedPlan?: SignupPlan | null;
   teamIntent?: { teamSize: string } | null;
 }) {
+  const { t } = useTranslation();
+  const planDetails = useMemo(
+    () => getPlanDetails((key, options) => t(key, options)),
+    [t]
+  );
   const [state, dispatch] = useReducer(choosePurposeReducer, {
     ...INITIAL_CHOOSE_PURPOSE_STATE,
     selectedPlan: defaultSelectedPlan,
@@ -165,7 +175,7 @@ export function ChoosePurpose({
   const navigation = useNavigation();
   const disabled = isFormProcessing(navigation.state) || !selectedPlan;
 
-  const selectedDetails = selectedPlan ? PLAN_DETAILS[selectedPlan] : null;
+  const selectedDetails = selectedPlan ? planDetails[selectedPlan] : null;
 
   const hasAuditPrices = !!(auditPrices.month || auditPrices.year);
   const hasBarcodePrices = !!(barcodePrices.month || barcodePrices.year);
@@ -187,13 +197,13 @@ export function ChoosePurpose({
 
   // Determine CTA label based on plan and addon selection
   const selectedAddons = [
-    wantsAudits && "Audit",
-    wantsBarcodes && "Barcode",
+    wantsAudits && t("welcome:audits"),
+    wantsBarcodes && t("welcome:barcodes"),
   ].filter(Boolean);
   const ctaLabel =
     selectedPlan === "personal" && wantsAnyAddon
-      ? `Start with ${selectedAddons.join(" & ")} trial`
-      : selectedDetails?.ctaLabel ?? "Start using Shelf";
+      ? t("welcome:startWithTrial", { addons: selectedAddons.join(" & ") })
+      : selectedDetails?.ctaLabel ?? t("welcome:startUsingShelf");
 
   // Determine href for team flow (pass addon params)
   const teamParams = new URLSearchParams();
@@ -216,23 +226,21 @@ export function ChoosePurpose({
         <ShelfSymbolLogo className="mb-4 size-8" />
         <div className="mb-4 max-w-2xl text-center">
           <h3 className="text-2xl font-semibold text-gray-900">
-            How would you like to get started with Shelf?
+            {t("welcome:howToStart")}
           </h3>
           <p className="mt-3 text-base text-gray-600">
-            Your choice determines which features we prepare for you. You can
-            upgrade to Team later from your workspace settings.
+            {t("welcome:choiceHelp")}
           </p>
           <p className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600">
-            If your organization already uses Shelf, you don't need to create a
-            new workspace — look for your email invite or sign in instead.
+            {t("welcome:existingOrganizationHelp")}
           </p>
         </div>
         <h4 className=" w-full text-left  font-semibold text-gray-700">
-          Select a plan
+          {t("welcome:selectPlan")}
         </h4>
         <div className="grid w-full grid-cols-2 gap-4">
-          {(Object.keys(PLAN_DETAILS) as Array<SignupPlan>).map((planKey) => {
-            const plan = PLAN_DETAILS[planKey];
+          {(Object.keys(planDetails) as Array<SignupPlan>).map((planKey) => {
+            const plan = planDetails[planKey];
             const isSelected = selectedPlan === planKey;
             return (
               <PlanCard
@@ -252,17 +260,18 @@ export function ChoosePurpose({
             );
           })}
         </div>
-        {PLAN_DETAILS.personal.helper ? (
+        {planDetails.personal.helper ? (
           <p className="mt-1 w-full text-sm text-gray-500">
-            {PLAN_DETAILS.personal.helper}
+            {planDetails.personal.helper}
           </p>
         ) : null}
 
         {teamIntent && selectedPlan === "personal" ? (
           <div className="mt-3 flex w-full flex-col gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-left sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-orange-800">
-              You told us your team has {teamIntent.teamSize}. Personal
-              workspaces are for one person and can't invite anyone.
+              {t("welcome:teamIntentWarning", {
+                teamSize: teamIntent.teamSize,
+              })}
             </p>
             <Button
               type="button"
@@ -271,7 +280,7 @@ export function ChoosePurpose({
               className="whitespace-nowrap"
               onClick={() => dispatch({ type: "select_plan", plan: "team" })}
             >
-              Switch to Team
+              {t("welcome:switchToTeam")}
             </Button>
           </div>
         ) : null}
@@ -279,12 +288,12 @@ export function ChoosePurpose({
         {showAddonsSection ? (
           <>
             <h4 className="mt-6 w-full text-left font-semibold text-gray-700">
-              Choose optional add-ons
+              {t("welcome:chooseAddons")}
             </h4>
             {showAuditOption ? (
               <AddonToggle
-                label={AUDIT_ADDON.label}
-                description={AUDIT_ADDON.description}
+                label={t("welcome:audits")}
+                description={t("welcome:auditsDescription")}
                 selected={wantsAudits}
                 onToggle={() => dispatch({ type: "toggle_audits" })}
                 prices={auditPrices}
@@ -297,8 +306,8 @@ export function ChoosePurpose({
             ) : null}
             {showBarcodeOption ? (
               <AddonToggle
-                label={BARCODE_ADDON.label}
-                description={BARCODE_ADDON.description}
+                label={t("welcome:barcodes")}
+                description={t("welcome:barcodesDescription")}
                 selected={wantsBarcodes}
                 onToggle={() => dispatch({ type: "toggle_barcodes" })}
                 prices={barcodePrices}
@@ -373,6 +382,7 @@ function AddonToggle({
   onBillingIntervalChange: (interval: AuditBillingInterval) => void;
   showBillingToggle: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="mt-2 w-full">
       <Card
@@ -404,7 +414,9 @@ function AddonToggle({
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h4 className="text-base font-semibold text-gray-900">{label}</h4>
-              <Tag className="bg-primary-50 text-primary-700">7-day trial</Tag>
+              <Tag className="bg-primary-50 text-primary-700">
+                {t("welcome:sevenDayTrial")}
+              </Tag>
             </div>
             <p className="mt-1 text-sm text-gray-600">{description}</p>
           </div>
@@ -432,6 +444,8 @@ function AddonBillingCards({
   billingInterval: AuditBillingInterval;
   onBillingIntervalChange: (interval: AuditBillingInterval) => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === "es" ? "es-AR" : "en-US";
   const { month: monthlyPrice, year: yearlyPrice } = prices;
 
   const yearlyDiscount =
@@ -464,14 +478,22 @@ function AddonBillingCards({
               billingInterval === "month" ? "text-primary-600" : "text-gray-500"
             )}
           >
-            Monthly
+            {t("welcome:monthly")}
           </p>
           <p className="text-2xl font-semibold">
-            {fmtPrice(monthlyPrice.unit_amount || 0, monthlyPrice.currency)}
-            <span className="text-sm font-normal text-gray-500">/mo</span>
+            {fmtPrice(
+              monthlyPrice.unit_amount || 0,
+              monthlyPrice.currency,
+              locale
+            )}
+            <span className="text-sm font-normal text-gray-500">
+              {t("welcome:perMonthShort")}
+            </span>
           </p>
-          <p className="text-xs text-gray-500">Billed monthly</p>
-          <p className="mt-1 text-xs text-gray-500">per workspace</p>
+          <p className="text-xs text-gray-500">{t("welcome:billedMonthly")}</p>
+          <p className="mt-1 text-xs text-gray-500">
+            {t("welcome:perWorkspace")}
+          </p>
         </button>
       )}
       {yearlyPrice && (
@@ -487,7 +509,7 @@ function AddonBillingCards({
         >
           {yearlyDiscount != null && yearlyDiscount > 0 && (
             <span className="absolute -top-2.5 rounded-full bg-primary-500 px-2 py-0.5 text-[10px] font-semibold text-white">
-              Save {yearlyDiscount}%
+              {t("welcome:savePercent", { percent: yearlyDiscount })}
             </span>
           )}
           <p
@@ -496,20 +518,30 @@ function AddonBillingCards({
               billingInterval === "year" ? "text-primary-600" : "text-gray-500"
             )}
           >
-            Yearly
+            {t("welcome:yearly")}
           </p>
           <p className="text-2xl font-semibold">
             {fmtPrice(
               Math.round((yearlyPrice.unit_amount || 0) / 12),
-              yearlyPrice.currency
+              yearlyPrice.currency,
+              locale
             )}
-            <span className="text-sm font-normal text-gray-500">/mo</span>
+            <span className="text-sm font-normal text-gray-500">
+              {t("welcome:perMonthShort")}
+            </span>
           </p>
           <p className="text-xs text-gray-500">
-            Billed annually{" "}
-            {fmtPrice(yearlyPrice.unit_amount || 0, yearlyPrice.currency)}
+            {t("welcome:billedAnnually", {
+              amount: fmtPrice(
+                yearlyPrice.unit_amount || 0,
+                yearlyPrice.currency,
+                locale
+              ),
+            })}
           </p>
-          <p className="mt-1 text-xs text-gray-500">per workspace</p>
+          <p className="mt-1 text-xs text-gray-500">
+            {t("welcome:perWorkspace")}
+          </p>
         </button>
       )}
     </div>

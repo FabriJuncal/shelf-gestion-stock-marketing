@@ -28,6 +28,8 @@ import {
 } from "~/components/workspace/edit-form";
 import { config } from "~/config/shelf.config";
 import { db } from "~/database/db.server";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import {
   getOrganizationAdmins,
   transferOwnership,
@@ -144,7 +146,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
       ]);
 
     const header: HeaderData = {
-      title: "General",
+      title: createI18n(await resolveRequestLanguage({ request })).t(
+        "settings:general"
+      ),
     };
 
     const canHideBranding = canHideShelfBranding(tierLimit);

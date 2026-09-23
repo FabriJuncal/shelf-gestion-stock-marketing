@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { MarkdownViewer } from "~/components/markdown/markdown-viewer";
 import { Button } from "~/components/shared/button";
 import { DateS } from "~/components/shared/date";
@@ -69,38 +70,44 @@ const Comment = ({
   actionsDropdown?: ReactNode;
   assetLinkBase?: string;
   when?: boolean;
-}) => (
-  <>
-    <header className="flex justify-between border-b px-3.5 py-3 text-text-xs md:text-text-sm">
-      <div>
-        <Tag>
-          <DateS date={note.createdAt} includeTime />
-        </Tag>{" "}
-        <span className="commentator font-medium text-gray-900">
-          {note.user ? resolveUserDisplayName(note.user) : "Unknown"}
-        </span>{" "}
-        <span className="text-gray-600">{timeAgo(note.createdAt)}</span>
-        {note.auditAsset && assetLinkBase && (
-          <>
-            {" "}
-            <span className="text-gray-600">on</span>{" "}
-            <Button
-              to={`${assetLinkBase}/${note.auditAsset.id}/details`}
-              variant="link-gray"
-            >
-              {note.auditAsset.asset.title}
-            </Button>
-          </>
-        )}
-      </div>
-      {actionsDropdown}
-    </header>
-    <div className="message px-3.5 py-3">
-      {/* Author-written content: the editor's link dialog makes external links
+}) => {
+  const { i18n } = useTranslation();
+
+  return (
+    <>
+      <header className="flex justify-between border-b px-3.5 py-3 text-text-xs md:text-text-sm">
+        <div>
+          <Tag>
+            <DateS date={note.createdAt} includeTime />
+          </Tag>{" "}
+          <span className="commentator font-medium text-gray-900">
+            {note.user ? resolveUserDisplayName(note.user) : "Unknown"}
+          </span>{" "}
+          <span className="text-gray-600">
+            {timeAgo(note.createdAt, i18n.resolvedLanguage ?? i18n.language)}
+          </span>
+          {note.auditAsset && assetLinkBase && (
+            <>
+              {" "}
+              <span className="text-gray-600">on</span>{" "}
+              <Button
+                to={`${assetLinkBase}/${note.auditAsset.id}/details`}
+                variant="link-gray"
+              >
+                {note.auditAsset.asset.title}
+              </Button>
+            </>
+          )}
+        </div>
+        {actionsDropdown}
+      </header>
+      <div className="message px-3.5 py-3">
+        {/* Author-written content: the editor's link dialog makes external links
           a deliberate feature here. System notes (the `Update` variant above)
           get the default `false` — their text is assembled by us from entity
           names, so an external link in one was injected. */}
-      <MarkdownViewer content={note.content} allowExternalLinks />
-    </div>
-  </>
-);
+        <MarkdownViewer content={note.content} allowExternalLinks />
+      </div>
+    </>
+  );
+};

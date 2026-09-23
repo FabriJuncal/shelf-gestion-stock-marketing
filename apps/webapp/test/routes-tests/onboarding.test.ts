@@ -103,6 +103,7 @@ describe("onboarding action validation", () => {
     createdWithInvite: false,
     onboarded: false,
     companyName: null,
+    language: "es",
   } as any;
 
   const context = {
@@ -271,5 +272,26 @@ describe("onboarding action validation", () => {
 
     expect(response.status).toBe(302);
     expect(updateUser).toHaveBeenCalled();
+  });
+
+  it("uses the authenticated account language over a conflicting browser language", async () => {
+    const request = buildRequest({ jobTitle: "   " });
+    request.headers.set("Accept-Language", "en-US");
+    request.headers.set("Cookie", "shelf-language=en");
+
+    const response = (await action(
+      createActionArgs({ context, request, params: {} })
+    )) as Response;
+    const body = (await response.json()) as {
+      error: {
+        additionalData: {
+          validationErrors: { jobTitle: { message: string } };
+        };
+      };
+    };
+
+    expect(body.error.additionalData.validationErrors.jobTitle.message).toBe(
+      "El rol es obligatorio."
+    );
   });
 });

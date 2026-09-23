@@ -1,0 +1,101 @@
+{
+  "slice_id": "04-slice",
+  "slice_number": "04",
+  "title": "Inventario y operación diaria",
+  "status": "pending",
+  "objective": "Gestionar activos y su organización en ambos idiomas sin cambiar sus reglas ni datos.",
+  "problem": "El vocabulario específico y los mensajes de operación de inventario siguen fuera del catálogo común.",
+  "value_outcome": "Una persona crea, consulta, edita y asigna un activo usando textos, validaciones y resultados en su idioma.",
+  "scope_summary": "Superficies de activos, modelos, categorías, etiquetas, ubicaciones, kits, asignaciones, escaneo y sus formularios de importación.",
+  "scope": {
+    "includes": [
+      "Traducir listas, detalles, formularios, filtros, selección masiva, estados y mensajes de inventario.",
+      "Cubrir activos, modelos, categorías, etiquetas, ubicaciones, kits y asignaciones/devoluciones fuera de reservas.",
+      "Traducir interfaces de QR/escaneo y flujos de importación/actualización de inventario.",
+      "Localizar mensajes de éxito/error de loaders/actions y etiquetas de actividad del sistema donde corresponda.",
+      "Registrar cobertura real del módulo en este slice durante implementación."
+    ],
+    "excludes": [
+      "Modificar nombres/notas y otros datos almacenados por usuarios.",
+      "Cambiar ALL_SELECTED_KEY, filtros de datos, cálculo de stock o permisos.",
+      "Cambiar formato de archivos importados/exportados; documentos se tratan en 06.",
+      "Flujos de reservas y auditorías de 05."
+    ]
+  },
+  "actors": ["Usuario con permisos de inventario", "Usuario que escanea un QR"],
+  "preconditions": [
+    "Slice 03 disponible y glosario definido.",
+    "Datos de prueba de activos, ubicaciones, kits y permisos existentes."
+  ],
+  "inputs": [
+    "Catálogos comunes, idioma de petición y textos de módulos de inventario.",
+    "Datos de prueba e inventario de rutas habilitadas."
+  ],
+  "outputs": [
+    "Inventario bilingüe, incluidos formularios y respuestas de operación.",
+    "Cobertura documentada de superficies traducidas."
+  ],
+  "workflow": [
+    {
+      "step": 1,
+      "name": "Localizar superficies",
+      "description": "Aplicar glosario a listas, detalles, filtros, formularios y vistas de escaneo."
+    },
+    {
+      "step": 2,
+      "name": "Localizar resultados",
+      "description": "Traducir mensajes de operaciones/validación usando idioma de petición sin cambiar sus códigos ni datos."
+    },
+    {
+      "step": 3,
+      "name": "Comprobar recorrido",
+      "description": "Crear/editar/asignar un activo y usar un QR con los permisos existentes; revisar formularios de importación."
+    },
+    {
+      "step": 4,
+      "name": "Registrar cobertura",
+      "description": "Actualizar este slice con superficies verificadas, huecos y evidencia sin duplicar pruebas por cada texto."
+    }
+  ],
+  "business_rules": [
+    "RF-04, RF-06 y RF-07 aplican al inventario.",
+    "Los valores internos de estados y los IDs permanecen estables.",
+    "Los nombres de activos/categorías y notas no se traducen ni reescriben.",
+    "El idioma no altera filtros, selecciones masivas ni reglas de stock."
+  ],
+  "validations": [
+    "Smoke dirigido de crear/editar/asignar activo en en/es, con una validación negativa representativa.",
+    "Cambiar idioma con un formulario de activo abierto y conservar valores/filtros.",
+    "Verificación dirigida de lista/detalle de kit y ubicación, escaneo y mensajes de importación.",
+    "Tests solo de lógica de traducción/errores modificada; no crear tests por sustituciones estáticas."
+  ],
+  "error_cases": [
+    "Nombre de activo parecido a una clave de traducción debe mostrarse literalmente.",
+    "Mensajes de datos inválidos y permisos insuficientes deben traducirse conservando respuesta y restricciones.",
+    "Un fallo de escaneo conserva la recuperación existente y localiza la explicación."
+  ],
+  "acceptance_criteria": [
+    "04-AC1: superficies de inventario inventariadas tienen en/es, incluidos vacíos, errores y accesibilidad.",
+    "04-AC2: recorrido representativo de activo produce los mismos datos y estados en ambos idiomas.",
+    "04-AC3: cambio de idioma conserva formulario y filtros; contenido libre permanece idéntico.",
+    "04-AC4: interfaces de importación/escaneo son bilingües sin cambiar contratos ni reglas de selección masiva."
+  ],
+  "dependencies": {
+    "functional": ["Glosario y catálogos compartidos."],
+    "technical": [
+      "apps/webapp/app/routes/_layout+/",
+      "apps/webapp/app/routes/qr+/",
+      "apps/webapp/app/components/assets/",
+      "apps/webapp/app/modules/"
+    ],
+    "external": [],
+    "depends_on_slices": ["03-slice"]
+  },
+  "implementation_order": 4,
+  "slicing_rationale": "Agrupa la experiencia coherente de inventario y reutiliza infraestructura compartida sin rediseñar reglas de negocio.",
+  "risks": [
+    "Confundir texto de sistema con datos del usuario puede modificar contenido que debe conservarse.",
+    "Mensajes originados en servicios pueden quedar en inglés si solo se convierten componentes."
+  ],
+  "open_questions": []
+}

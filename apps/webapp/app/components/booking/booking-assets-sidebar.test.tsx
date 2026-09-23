@@ -14,11 +14,19 @@
  * suite covers that loading contract itself.
  */
 import type { ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { I18nextProvider } from "react-i18next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createI18n } from "~/i18n/i18n";
 import { BookingAssetsSidebar } from "./booking-assets-sidebar";
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <I18nextProvider i18n={createI18n("en")}>{ui}</I18nextProvider>
+  );
+}
 
 // why: useCurrentOrganization calls useRouteLoaderData under the hood, which
 // throws outside a router context. Returning null short-circuits the
@@ -82,7 +90,7 @@ vi.mock("../assets/consumption-type-badge", () => ({
   ConsumptionTypeBadge: () => null,
 }));
 
-// why: avoiding native <img> loading/fallback complexity for kit rows.
+// why: avoiding native image loading/fallback complexity for kit rows.
 vi.mock("../kits/kit-image", () => ({
   default: () => <div data-testid="kit-image" />,
 }));

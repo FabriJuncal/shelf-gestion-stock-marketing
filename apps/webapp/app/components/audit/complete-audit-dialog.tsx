@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { CheckCircle2, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
 import { AuditImageUploadSection } from "~/components/audit/audit-image-upload-box";
 import { Button } from "~/components/shared/button";
@@ -46,6 +47,7 @@ export default function CompleteAuditDialog({
   portalContainer,
   stats,
 }: CompleteAuditDialogProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const formDisabled = useDisabled();
@@ -54,7 +56,7 @@ export default function CompleteAuditDialog({
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button disabled={disabled} variant="primary" type="button">
-          Complete Audit
+          {t("audit:completeAudit")}
         </Button>
       </AlertDialogTrigger>
 
@@ -74,7 +76,7 @@ export default function CompleteAuditDialog({
           <AlertDialogHeader>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="size-5 text-success-500" />
-              <AlertDialogTitle>Complete Audit</AlertDialogTitle>
+              <AlertDialogTitle>{t("audit:completeAudit")}</AlertDialogTitle>
             </div>
             <button
               type="button"
@@ -83,49 +85,47 @@ export default function CompleteAuditDialog({
               disabled={formDisabled}
             >
               <X className="size-4" />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{t("audit:close")}</span>
             </button>
           </AlertDialogHeader>
 
           <AlertDialogDescription asChild>
             <div className="space-y-4">
-              <p>
-                You are about to complete the audit{" "}
-                <span className="font-semibold text-gray-900">{auditName}</span>
-                . This action cannot be undone.
-              </p>
+              <p>{t("audit:completeAuditConfirmation", { auditName })}</p>
 
               {stats.foundCount + stats.unexpectedCount === 0 ? (
                 <div className="rounded-lg border border-warning-300 bg-warning-25 p-3 text-sm text-warning-700">
-                  No assets were scanned. Completing now marks all{" "}
-                  <span className="font-semibold">{stats.expectedCount}</span>{" "}
-                  expected assets as missing.
+                  {t("audit:noAssetsScanned", { count: stats.expectedCount })}
                 </div>
               ) : null}
 
               <div className="rounded-lg bg-gray-50 p-4">
                 <h4 className="mb-2 text-sm font-semibold text-gray-700">
-                  Audit Summary
+                  {t("audit:auditSummary")}
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Expected:</span>
+                    <span className="text-gray-600">
+                      {t("audit:expected")}:
+                    </span>
                     <span className="font-medium">{stats.expectedCount}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Found:</span>
+                    <span className="text-gray-600">{t("audit:found")}:</span>
                     <span className="font-medium text-success-600">
                       {stats.foundCount}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Missing:</span>
+                    <span className="text-gray-600">{t("audit:missing")}:</span>
                     <span className="font-medium text-error-600">
                       {stats.missingCount}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Unexpected:</span>
+                    <span className="text-gray-600">
+                      {t("audit:unexpected")}:
+                    </span>
                     <span className="font-medium text-warning-600">
                       {stats.unexpectedCount}
                     </span>
@@ -138,16 +138,16 @@ export default function CompleteAuditDialog({
                   htmlFor="completion-note"
                   className="text-sm font-medium text-gray-700"
                 >
-                  Completion Note (Optional)
+                  {t("audit:completionNoteOptional")}
                 </label>
                 <p className="text-sm text-gray-500">
-                  Add any final observations or notes about this audit.
+                  {t("audit:completionNoteHelp")}
                 </p>
                 <textarea
                   ref={textareaRef}
                   id="completion-note"
                   name="note"
-                  placeholder="Add completion notes here..."
+                  placeholder={t("audit:completionNotePlaceholder")}
                   className="min-h-[120px] w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-300/20"
                   rows={5}
                 />
@@ -160,11 +160,11 @@ export default function CompleteAuditDialog({
           <AlertDialogFooter className="mt-4">
             <AlertDialogCancel asChild>
               <Button variant="secondary" type="button">
-                Cancel
+                {t("booking:cancel")}
               </Button>
             </AlertDialogCancel>
             <Button type="submit" variant="primary" disabled={formDisabled}>
-              {formDisabled ? "Completing..." : "Complete Audit"}
+              {formDisabled ? t("audit:completing") : t("audit:completeAudit")}
             </Button>
           </AlertDialogFooter>
         </Form>

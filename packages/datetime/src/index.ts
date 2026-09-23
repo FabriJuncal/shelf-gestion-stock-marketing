@@ -382,6 +382,8 @@ export function wallClockOnDayInZone(
 
 /** Superset of the option shapes DateS callers pass today (facts-02 §C). */
 export type DateFormatOptions = {
+  /** Language used for display names (months, weekdays, AM/PM); date order stays in user prefs. */
+  displayLocale?: string;
   weekday?: "long" | "short" | "narrow";
   year?: "numeric" | "2-digit";
   month?: "numeric" | "2-digit" | "short" | "long";
@@ -700,18 +702,21 @@ export function getCachedFormatter(
 }
 
 /**
- * Run a fixed-"en-US" formatToParts against the instant and return a
- * type→value map (literals dropped). `timeZone` undefined ⇒ no conversion.
+ * Run `formatToParts` against the instant and return a type→value map
+ * (literals dropped). Numeric parts use English by default so persisted date
+ * preferences keep their exact order; display names may opt into another locale.
  *
  * @param date - the instant to format
  * @param timeZone - IANA tz to convert into, or undefined for no conversion
  * @param intlOptions - the Intl field set to request
+ * @param displayLocale - locale for display names; defaults to English
  * @returns a `type → value` map with `literal` parts removed
  */
 function partsFor(
   date: Date,
   timeZone: string | undefined,
-  intlOptions: Intl.DateTimeFormatOptions
+  intlOptions: Intl.DateTimeFormatOptions,
+  displayLocale = "en-US"
 ): Record<string, string> {
   const options: Intl.DateTimeFormatOptions = { ...intlOptions };
   if (timeZone) options.timeZone = timeZone;
@@ -721,7 +726,7 @@ function partsFor(
   // never throw mid-loop and drop everyone else's notifications. Fall back to UTC.
   let formatter: Intl.DateTimeFormat;
   try {
-    formatter = getCachedFormatter("en-US", options);
+    formatter = getCachedFormatter(displayLocale, options);
   } catch {
     formatter = getCachedFormatter("en-US", {
       ...intlOptions,
@@ -942,10 +947,15 @@ export function formatDate(
           // parts for a MULTI-field format. Asked for `{ month }` alone it
           // returns no part of type "month", so the name resolves to undefined
           // and `join` renders it as an empty string.
-          partsFor(date, timeZone, {
-            month: effectiveMonthStyle,
-            day: "numeric",
-          }).month // name
+          partsFor(
+            date,
+            timeZone,
+            {
+              month: effectiveMonthStyle,
+              day: "numeric",
+            },
+            opts.displayLocale
+          ).month // name
         : effectiveMonthStyle === "2-digit"
         ? pad2(numeric.month)
         : numeric.month,
@@ -964,9 +974,14 @@ export function formatDate(
       : activeOrder.map((field) => rendered[field]).join(separator);
 
     if (n.weekday != null) {
-      const weekday = partsFor(date, timeZone, {
-        weekday: n.weekday,
-      }).weekday;
+      const weekday = partsFor(
+        date,
+        timeZone,
+        {
+          weekday: n.weekday,
+        },
+        opts.displayLocale
+      ).weekday;
       dateStr = dateStr ? `${weekday}, ${dateStr}` : weekday;
     }
     if (dateStr) out.push(dateStr);
@@ -976,11 +991,16 @@ export function formatDate(
     let timeStr: string;
     if (prefs.timeFormat === "H12") {
       // Intl already yields "5", "05", "PM" for hour12 — read them directly.
-      const dp = partsFor(date, timeZone, {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
+      const dp = partsFor(
+        date,
+        timeZone,
+        {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        },
+        opts.displayLocale
+      );
       // Honour an explicit `hour: "2-digit"` so the H12 clock zero-pads like the
       // H24 branch below ("05:30 PM"), instead of the two disagreeing.
       const hour = n.hourStyle === "2-digit" ? pad2(dp.hour) : dp.hour;
@@ -991,11 +1011,16 @@ export function formatDate(
       timeStr = `${hour}:${numeric.minute}`;
     }
     if (n.timeZoneName) {
-      const tzName = partsFor(date, timeZone, {
-        hour: "numeric",
-        timeZoneName: n.timeZoneName,
-        hour12: prefs.timeFormat === "H12",
-      }).timeZoneName;
+      const tzName = partsFor(
+        date,
+        timeZone,
+        {
+          hour: "numeric",
+          timeZoneName: n.timeZoneName,
+          hour12: prefs.timeFormat === "H12",
+        },
+        opts.displayLocale
+      ).timeZoneName;
       timeStr = `${timeStr} ${tzName}`;
     }
     out.push(timeStr);

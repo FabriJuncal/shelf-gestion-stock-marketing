@@ -2,6 +2,11 @@ import type { Organization, SsoDetails } from "@prisma/client";
 import { isAuthApiError } from "@supabase/supabase-js";
 import type { AuthSession } from "@server/session";
 import { db } from "~/database/db.server";
+import type { AppLanguage } from "~/i18n/types";
+import {
+  AUTH_ERROR_CODES,
+  authErrorData,
+} from "~/modules/auth/localize-error.server";
 import {
   deleteAuthAccount,
   getAuthUserById,
@@ -47,6 +52,7 @@ export async function resolveUserAndOrgForSsoCallback({
   groups,
   contactInfo,
   formatPrefs,
+  language,
 }: {
   authSession: AuthSession;
   firstName: string;
@@ -62,6 +68,8 @@ export async function resolveUserAndOrgForSsoCallback({
   };
   /** Browser-detected prefs; only applied on the new-user (createUserFromSSO) branch. */
   formatPrefs?: DetectedFormatPrefs;
+  /** Interface language; only applied on the new-user branch. */
+  language?: AppLanguage;
 }) {
   try {
     // First check if user exists
@@ -96,6 +104,9 @@ export async function resolveUserAndOrgForSsoCallback({
           title: "User already exists",
           message:
             "It looks like the email you're using is linked to a personal account in Shelf. Please contact our support team to update your personal workspace to a different email account.",
+          additionalData: authErrorData(AUTH_ERROR_CODES.ssoEmailConflict, {
+            email: authSession.email,
+          }),
           label: "Auth",
           shouldBeCaptured: false,
         });
@@ -145,7 +156,8 @@ export async function resolveUserAndOrgForSsoCallback({
           groups,
           contactInfo,
         },
-        formatPrefs
+        formatPrefs,
+        language
       );
       return { user: response.user, org: response.org };
     } catch (createError) {
@@ -159,8 +171,11 @@ export async function resolveUserAndOrgForSsoCallback({
       title: cause.title || "Authentication failed",
       message: cause.message || "Failed to authenticate user",
       additionalData: {
-        email: authSession.email,
-        domain: authSession.email.split("@")[1],
+        ...authErrorData(AUTH_ERROR_CODES.generic, {
+          email: authSession.email,
+          domain: authSession.email.split("@")[1],
+        }),
+        ...(isLikeShelfError(cause) ? cause.additionalData : {}),
       },
       label: "Auth",
       shouldBeCaptured: isLikeShelfError(cause) ? cause.shouldBeCaptured : true,
@@ -353,6 +368,9 @@ export async function validateNonSSOSignup(email: string): Promise<void> {
       cause: null,
       message:
         "This email domain uses SSO authentication. Please sign in using your organization's SSO provider.",
+      additionalData: authErrorData(AUTH_ERROR_CODES.ssoDomainRequired, {
+        email,
+      }),
       label: "Auth",
       status: 400,
       shouldBeCaptured: false,

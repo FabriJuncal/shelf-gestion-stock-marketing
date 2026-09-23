@@ -2,6 +2,7 @@ import { Link, useMatches, Outlet } from "react-router";
 import { ErrorContent } from "~/components/errors";
 import { ShelfSymbolLogo } from "~/components/marketing/logos";
 import SubHeading from "~/components/shared/sub-heading";
+import { LanguageSwitcher } from "~/components/user/language-switcher";
 import { appendToMetaTitle } from "~/utils/append-to-meta-title";
 
 export const loader = () => null;
@@ -19,7 +20,10 @@ export default function App() {
 
   return (
     <main className="flex h-screen">
-      <div className="flex size-full flex-col items-center justify-center p-6 lg:p-10">
+      <div className="relative flex size-full flex-col items-center justify-center p-6 lg:p-10">
+        <div className="absolute right-6 top-6">
+          <LanguageSwitcher />
+        </div>
         <div className=" mb-8 text-center">
           <Link to="/" reloadDocument>
             <ShelfSymbolLogo />

@@ -1,0 +1,131 @@
+{
+  "slice_id": "07-slice",
+  "slice_number": "07",
+  "title": "Verificación dirigida y publicación recuperable",
+  "status": "pending",
+  "objective": "Publicar la experiencia completa con evidencia de cobertura y un procedimiento de recuperación probado.",
+  "problem": "Entregas parciales no acreditan cobertura global ni garantizan compatibilidad del orden de despliegue.",
+  "value_outcome": "El usuario dispone de toda la webapp en en/es, con correos consistentes y una versión de producción recuperable.",
+  "scope_summary": "Cierre de aceptación, prueba de migración/compatibilidad y publicación de los slices implementados.",
+  "scope": {
+    "includes": [
+      "Consolidar inventario y evidencia de RF-01 a RF-10 y G-01 a G-06 en spec/slices.",
+      "Verificar huecos de traducción y recorrido final dirigido sin repetir pruebas aprobadas innecesariamente.",
+      "Ensayar migración aditiva con usuarios existentes y código anterior en entorno de prueba.",
+      "Preparar recuperación de código y plantillas; aplicar migración antes del código consumidor.",
+      "Publicar en Vercel dentro del alcance autorizado y observar errores de acceso/carga/sincronización en herramientas existentes."
+    ],
+    "excludes": [
+      "Añadir funcionalidades o idiomas.",
+      "Regresión general de reglas intactas, carga masiva o auditoría de seguridad no motivada.",
+      "Eliminar usuarios, resetear base o borrar columna para revertir.",
+      "Afirmar pruebas/despliegues hechos sin evidencia."
+    ]
+  },
+  "actors": ["Responsable de implementación/despliegue", "Usuario de prueba"],
+  "preconditions": [
+    "Slices 01 a 06 completos con evidencia.",
+    "Entorno de prueba y accesos de publicación identificados; despliegue incluido en la autorización vigente.",
+    "Versión anterior recuperable y respaldo de plantillas localizados."
+  ],
+  "inputs": [
+    "Matriz de cobertura, resultados de pruebas y artefacto de build.",
+    "Migración aditiva de 01, plantillas de 02 y configuración del entorno objetivo."
+  ],
+  "outputs": [
+    "Cobertura completa documentada y aceptación verificada.",
+    "Despliegue identificado, smoke posterior y procedimiento de recuperación comprobado.",
+    "Estado real de ejecución actualizado en los documentos del spec."
+  ],
+  "workflow": [
+    {
+      "step": 1,
+      "name": "Cerrar evidencia",
+      "description": "Revisar cobertura/criterios por slice y ejecutar solo pruebas pendientes o invalidadas por cambios nuevos."
+    },
+    {
+      "step": 2,
+      "name": "Ensayar compatibilidad",
+      "description": "Aplicar migración en prueba, conservar filas existentes y verificar que la versión anterior funciona con columna adicional."
+    },
+    {
+      "step": 3,
+      "name": "Preparar recuperación",
+      "description": "Identificar versión previa y respaldar plantillas; ensayar restauración del código conservando columna en prueba."
+    },
+    {
+      "step": 4,
+      "name": "Publicar en orden",
+      "description": "Aplicar/verificar migración en objetivo, configurar plantillas bilingües y desplegar código consumidor en Vercel."
+    },
+    {
+      "step": 5,
+      "name": "Comprobar y observar",
+      "description": "Smoke de acceso/cambio de idioma/correo y revisión de errores existentes; recuperar versión previa si el cambio rompe acceso/carga o pierde datos de formularios."
+    }
+  ],
+  "business_rules": [
+    "RF-10, G-01 a G-06 y orden del spec 14.1.",
+    "Migración siempre antes de código consumidor; columna nullable conservada al revertir.",
+    "No publicar como completa una cobertura parcial.",
+    "La sincronización parcial tiene aviso/reintento; no debe impedir autenticación.",
+    "No usar db:reset ni usuarios reales para pruebas destructivas."
+  ],
+  "validations": [
+    "Verificar matriz de catálogos y revisión de textos fuera de ellos; ninguna superficie habilitada queda sin responsable/evidencia.",
+    "Registro/confirmación/login/recuperación en ambos idiomas y preferencia entre sesiones/dispositivos con evidencia vigente de 01/02.",
+    "Comprobar cambio con formulario abierto, formatos y muestras visuales de móvil/escritorio.",
+    "Ensayo de migración/código anterior y reversión en prueba conservando datos.",
+    "Ejecutar validación habitual de repo antes de commits sustantivos y build de producción; registrar fallos preexistentes con evidencia, sin declarar verde si no lo está.",
+    "Smoke posterior y comprobación de errores de acceso/carga/sincronización, sin instrumentación adicional por defecto."
+  ],
+  "error_cases": [
+    "Migración no aplicada/verificable: detener publicación del código consumidor.",
+    "Fallo de plantillas: restaurar anteriores y comprobar envío/enlaces.",
+    "Regresión de acceso/carga atribuible al cambio: restaurar versión previa conservando columna.",
+    "Cobertura faltante: resolver en slice propietario antes de declarar completo.",
+    "Falta de autorización/acceso de publicación: dejar artefactos y evidencia preparados, sin inventar despliegue."
+  ],
+  "acceptance_criteria": [
+    "07-AC1: RF-01 a RF-10 y G-01 a G-06 tienen evidencia y estado final documentados.",
+    "07-AC2: no hay traducciones faltantes en superficies habilitadas; revisión visual dirigida satisfactoria.",
+    "07-AC3: migración preserva usuarios y código previo funciona con columna agregada.",
+    "07-AC4: recuperación de código/plantillas está ensayada y documentada sin eliminar columna.",
+    "07-AC5: despliegue sigue el orden definido y smoke posterior confirma acceso, persistencia y correo.",
+    "07-AC6: resultados distinguen pruebas aprobadas, fallos y limitaciones reales; no se reporta finalizado un despliegue pendiente."
+  ],
+  "dependencies": {
+    "functional": [
+      "Todos los recorridos y salidas dentro de alcance traducidos."
+    ],
+    "technical": [
+      "Scripts pnpm existentes",
+      "Migración @shelf/database",
+      "Artefacto/build y configuración Vercel",
+      "Herramientas de logs existentes"
+    ],
+    "external": [
+      "Supabase del entorno objetivo",
+      "Vercel y entrega de correo",
+      "Buzón de prueba"
+    ],
+    "depends_on_slices": [
+      "01-slice",
+      "02-slice",
+      "03-slice",
+      "04-slice",
+      "05-slice",
+      "06-slice"
+    ]
+  },
+  "implementation_order": 7,
+  "slicing_rationale": "Cierre operacional separado que integra evidencia previa y comprueba solo las dependencias transversales y el despliegue.",
+  "risks": [
+    "Publicar código antes de migración rompe consultas del root loader.",
+    "Preview y producción pueden diferir en plantillas o redirect URLs; verificar configuración del destino.",
+    "No confundir presencia de selector con cobertura completa."
+  ],
+  "open_questions": [
+    "Identificar entorno de prueba y versión concreta de recuperación al ejecutar el slice; no son datos necesarios para aprobar el plan."
+  ]
+}

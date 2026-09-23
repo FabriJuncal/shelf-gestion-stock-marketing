@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -10,8 +11,23 @@ import { z } from "zod";
 import { Form } from "~/components/custom-form";
 import { ShelfOTP } from "~/components/forms/otp-input";
 import { Button } from "~/components/shared/button";
+import SubHeading from "~/components/shared/sub-heading";
+import { db } from "~/database/db.server";
 import { useSearchParams } from "~/hooks/search-params";
 import { useDisabled } from "~/hooks/use-disabled";
+import { createI18n } from "~/i18n/i18n";
+import {
+  reconcileLanguageWithSupabase,
+  withLanguageSyncStatus,
+} from "~/i18n/language-sync.server";
+import { resolveRequestLanguage } from "~/i18n/language.server";
+import { normalizeLanguage } from "~/i18n/types";
+import { getSupabaseAdmin } from "~/integrations/supabase/client";
+import {
+  AUTH_ERROR_CODES,
+  authErrorData,
+  localizeAuthError,
+} from "~/modules/auth/localize-error.server";
 import { verifyOtpAndSignin } from "~/modules/auth/service.server";
 import {
   getSelectedOrganization,
@@ -36,10 +52,11 @@ import { getOtpPageData, type OtpVerifyMode } from "~/utils/otp";
 import { tw } from "~/utils/tw";
 import type { action as resendOtpAction } from "./resend-otp";
 
-export function loader({ context, request }: LoaderFunctionArgs) {
+export async function loader({ context, request }: LoaderFunctionArgs) {
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get("mode") as OtpVerifyMode;
-  const title = getOtpPageData(mode).title;
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
+  const title = i18n.t(getOtpPageData(mode).titleKey);
 
   if (context.isAuthenticated) {
     return redirect("/assets");
@@ -48,22 +65,27 @@ export function loader({ context, request }: LoaderFunctionArgs) {
   return payload({ title });
 }
 
-const OtpSchema = z.object({
-  otp: z.string().min(2, "Please enter the code sent to your email"),
-  email: z
-    .string()
-    .transform((email) => email.toLowerCase())
-    .refine(validEmail, () => ({
-      message: "Please enter a valid email",
-    })),
-});
+function createOtpSchema(t: (key: string) => string) {
+  return z.object({
+    otp: z.string().min(2, t("auth:otpCodeRequired")),
+    email: z
+      .string()
+      .transform((email) => email.toLowerCase())
+      .refine(validEmail, () => ({
+        message: t("auth:invalidEmail"),
+      })),
+  });
+}
 
 export async function action({ context, request }: ActionFunctionArgs) {
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
+
   try {
     const method = getActionMethod(request);
 
     switch (method) {
       case "POST": {
+        const OtpSchema = createOtpSchema((key) => i18n.t(key));
         let formData: FormData;
         try {
           formData = await request.formData();
@@ -72,7 +94,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
             error(
               new ShelfError({
                 cause,
-                message: "Invalid request body",
+                message: i18n.t("auth:invalidRequestBody"),
                 label: "Request validation",
                 shouldBeCaptured: false,
                 status: 400,
@@ -100,10 +122,27 @@ export async function action({ context, request }: ActionFunctionArgs) {
             // lazy backfill fills the real zone on a later load — never the
             // "UTC" fallback, which would stick forever.
             const formatPrefs = detectFormatPrefsForPersistence(request);
+            const { data: authUser, error: authUserError } =
+              await getSupabaseAdmin().auth.admin.getUserById(
+                authSession.userId
+              );
+            if (authUserError) {
+              throw new ShelfError({
+                cause: authUserError,
+                label: "Auth",
+                message: "Failed to read authentication metadata",
+                additionalData: authErrorData(AUTH_ERROR_CODES.generic),
+              });
+            }
+
+            const language =
+              normalizeLanguage(authUser.user?.user_metadata?.language) ??
+              (await resolveRequestLanguage({ request }));
             await createUser({
               ...authSession,
               username,
               formatPrefs,
+              language,
             });
           } catch (createError) {
             // Handle race condition: if a concurrent request already
@@ -117,6 +156,15 @@ export async function action({ context, request }: ActionFunctionArgs) {
           }
         }
 
+        const localUser = await db.user.findUnique({
+          where: { id: authSession.userId },
+          select: { language: true },
+        });
+        const languageSyncStatus = await reconcileLanguageWithSupabase(
+          authSession.userId,
+          localUser?.language ?? null
+        );
+
         // Setting the auth session and redirecting user to assets page
         context.setSession(authSession);
 
@@ -125,18 +173,22 @@ export async function action({ context, request }: ActionFunctionArgs) {
           request,
         });
 
-        return redirect(safeRedirect("/assets"), {
-          headers: [
-            setCookie(await setSelectedOrganizationIdCookie(organizationId)),
-          ],
-        });
+        return redirect(
+          withLanguageSyncStatus(safeRedirect("/assets"), languageSyncStatus),
+          {
+            headers: [
+              setCookie(await setSelectedOrganizationIdCookie(organizationId)),
+            ],
+          }
+        );
       }
     }
 
     throw notAllowedMethod(method);
   } catch (cause) {
     const reason = makeShelfError(cause);
-    return data(error(reason), { status: reason.status });
+    const localizedReason = localizeAuthError(reason, (key) => i18n.t(key));
+    return data(error(localizedReason), { status: localizedReason.status });
   }
 }
 
@@ -147,6 +199,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 type resendAction = typeof resendOtpAction;
 
 export default function OtpPage() {
+  const { t } = useTranslation();
   const [message, setMessage] = useState<{
     message: string;
     type: "success" | "error";
@@ -156,6 +209,7 @@ export default function OtpPage() {
   const fetcher = useFetcher<resendAction>();
 
   const formRef = useRef<HTMLFormElement>(null);
+  const OtpSchema = useMemo(() => createOtpSchema((key) => t(key)), [t]);
   const zo = useZorm("otpForm", OtpSchema);
   const zormRef = useCallback(
     (el: HTMLFormElement | null) => {
@@ -183,7 +237,7 @@ export default function OtpPage() {
       });
     } catch {
       setMessage({
-        message: "Something went wrong. Please try again.",
+        message: t("auth:resetUnexpectedError"),
         type: "error",
       });
     }
@@ -199,16 +253,18 @@ export default function OtpPage() {
         });
       } else {
         setMessage({
-          message: "Email sent successfully. Please check your inbox.",
+          message: t("auth:emailSent"),
           type: "success",
         });
       }
     }
-  }, [fetcher]);
+  }, [fetcher, t]);
 
   return (
     <>
-      <pageData.SubHeading email={email} />
+      <SubHeading className="-mt-4 text-center">
+        {t(pageData.subHeadingKey, { email })}
+      </SubHeading>
 
       <div className="mt-2 flex min-h-full flex-col justify-center">
         <div className="mx-auto w-full max-w-md px-8">
@@ -243,7 +299,7 @@ export default function OtpPage() {
               className="w-full "
               disabled={fetcherDisabled || disabled}
             >
-              {pageData.buttonTitle}
+              {t(pageData.buttonKey)}
             </Button>
           </Form>
 
@@ -251,9 +307,9 @@ export default function OtpPage() {
             className="mt-6 w-full text-center text-sm font-semibold"
             onClick={handleResendOtp}
           >
-            Did not receive a code?{" "}
+            {t("auth:didNotReceiveCode")}{" "}
             <span className="text-primary-500">
-              {fetcherDisabled ? "Sending code..." : "Send again"}
+              {fetcherDisabled ? t("auth:sendingCode") : t("auth:sendAgain")}
             </span>
           </button>
         </div>

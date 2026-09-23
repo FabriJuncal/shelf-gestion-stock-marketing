@@ -29,9 +29,11 @@ import { useEffect, useRef, useState } from "react";
 import type { DateFormatPreference } from "@prisma/client";
 import * as Popover from "@radix-ui/react-popover";
 import { format, isValid, parse } from "date-fns";
+import { enUS, es } from "date-fns/locale";
 import { CalendarIcon, X } from "lucide-react";
 import type { Matcher } from "react-day-picker";
 import { DayPicker } from "react-day-picker";
+import { useTranslation } from "react-i18next";
 import "react-day-picker/style.css";
 
 import { InnerLabel } from "~/components/forms/inner-label";
@@ -212,10 +214,13 @@ export function DateTimePicker({
   disabled = false,
   required = false,
   className,
-  placeholder = "Select date",
+  placeholder,
   clearable = false,
 }: DateTimePickerProps) {
   const { prefs } = useDateFormatter();
+  const { i18n, t } = useTranslation();
+  const displayLanguage = i18n.resolvedLanguage ?? i18n.language ?? "en";
+  const calendarLocale = displayLanguage.startsWith("es") ? es : enUS;
   const isControlled = value !== undefined;
 
   // date-fns tokens for the workspace format — drives both rendering the typed
@@ -224,7 +229,7 @@ export function DateTimePicker({
 
   /** Render a Date as canonical text in the workspace format ("" for none). */
   const dateToText = (day: Date | undefined): string =>
-    day ? format(day, tokens) : "";
+    day ? format(day, tokens, { locale: calendarLocale }) : "";
 
   const [open, setOpen] = useState(false);
   // The whole field wrapper (text input + calendar icon). The calendar opens on
@@ -247,7 +252,7 @@ export function DateTimePicker({
   // wire→text effect, which would clobber mid-typing input).
   const [typedText, setTypedText] = useState<string>(() => {
     const { date } = parseWireToParts(value ?? defaultValue ?? "");
-    return date ? format(date, tokens) : "";
+    return date ? format(date, tokens, { locale: calendarLocale }) : "";
   });
   // Internal validation message for a NON-EMPTY typed value that does not
   // resolve to a valid, in-range date. Set on blur (never mid-typing) so a
@@ -275,9 +280,9 @@ export function DateTimePicker({
     // Genuine EXTERNAL change (navigating to a different booking, or a sibling
     // field auto-adjusting this one): normalize the text, drop any stale error.
     const { date } = parseWireToParts(nextWire);
-    setTypedText(date ? format(date, tokens) : "");
+    setTypedText(date ? format(date, tokens, { locale: calendarLocale }) : "");
     setTypedError(null);
-  }, [isControlled, value, tokens]);
+  }, [calendarLocale, isControlled, value, tokens]);
 
   const wire = internalWire;
   const { date: selectedDate, time } = parseWireToParts(wire);
@@ -314,7 +319,7 @@ export function DateTimePicker({
    */
   const parseTypedText = (text: string): Date | null => {
     if (text.trim() === "") return null;
-    const parsed = parse(text, tokens, new Date());
+    const parsed = parse(text, tokens, new Date(), { locale: calendarLocale });
     if (!isValid(parsed)) return null;
     if (min && compareDay(parsed, min) < 0) return null;
     if (max && compareDay(parsed, max) > 0) return null;
@@ -373,7 +378,7 @@ export function DateTimePicker({
     // Invalid, non-empty text: surface an error and clear the stale wire so the
     // prior value can't be submitted. The invalid text stays visible for the
     // user to correct.
-    setTypedError("Please enter a valid date");
+    setTypedError(t("common:pleaseEnterValidDate"));
     commit("");
   };
 
@@ -416,9 +421,10 @@ export function DateTimePicker({
   // raw format token ("mmm d, yyyy"), which reads as gibberish to normal users.
   // (The non-typeable DateRangePicker button uses a plain "Select …" label.)
   const placeholderText =
-    placeholder && placeholder !== "Select date"
-      ? placeholder
-      : `e.g. ${format(PLACEHOLDER_EXAMPLE_DATE, tokens)}`;
+    placeholder ??
+    `e.g. ${format(PLACEHOLDER_EXAMPLE_DATE, tokens, {
+      locale: calendarLocale,
+    })}`;
 
   // Build react-day-picker disabled matchers from min/max bounds.
   const disabledMatchers: Matcher[] = [];
@@ -557,6 +563,7 @@ export function DateTimePicker({
             <style>{RDP_STYLE}</style>
             <DayPicker
               mode="single"
+              locale={calendarLocale}
               captionLayout="dropdown"
               {...calendarBounds()}
               selected={selectedDate}
@@ -578,7 +585,7 @@ export function DateTimePicker({
                   className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700"
                 >
                   <X className="size-3" />
-                  Clear
+                  {t("common:clear")}
                 </button>
               </div>
             ) : null}

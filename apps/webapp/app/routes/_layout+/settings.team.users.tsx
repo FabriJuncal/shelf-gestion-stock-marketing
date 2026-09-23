@@ -20,6 +20,8 @@ import { InfoTooltip } from "~/components/shared/info-tooltip";
 import { Td, Th } from "~/components/table";
 import { SSOUserBadge } from "~/components/user/sso-user-badge";
 import { TeamUsersActionsDropdown } from "~/components/workspace/users-actions-dropdown";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import type { TeamMembersWithUserOrInvite } from "~/modules/settings/service.server";
 import { getPaginatedAndFilterableSettingUsers } from "~/modules/settings/service.server";
 import type { RouteHandleWithName } from "~/modules/types";
@@ -71,7 +73,10 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       });
 
     const header: HeaderData = {
-      title: `Settings - ${organization.name}`,
+      title: createI18n(await resolveRequestLanguage({ request })).t(
+        "settings:usersInWorkspace",
+        { organization: organization.name }
+      ),
     };
 
     const modelName = {

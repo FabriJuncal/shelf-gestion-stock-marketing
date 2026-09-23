@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Prisma } from "@prisma/client";
 import { KitStatus, OrganizationRoles } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import type {
   MetaFunction,
   LoaderFunctionArgs,
@@ -29,7 +30,6 @@ import { Pagination } from "~/components/list/pagination";
 import { LocationBadge } from "~/components/location/location-badge";
 import { Button } from "~/components/shared/button";
 import { Card } from "~/components/shared/card";
-import { GrayBadge } from "~/components/shared/gray-badge";
 import { InfoTooltip } from "~/components/shared/info-tooltip";
 import { Td, Th } from "~/components/table";
 import { TeamMemberBadge } from "~/components/user/team-member-badge";
@@ -310,6 +310,7 @@ export const handle = {
 };
 
 export default function KitsIndexPage() {
+  const { t } = useTranslation();
   const { items } = useLoaderData<typeof loader>();
   const { roles, isBase } = useUserRoleHelper();
   const canCreateKit = userHasPermission({
@@ -332,8 +333,8 @@ export default function KitsIndexPage() {
     <>
       <Header>
         {canCreateKit && (
-          <Button to="new" role="link" aria-label="new kit">
-            New kit
+          <Button to="new" role="link" aria-label={t("inventory:newKit")}>
+            {t("inventory:newKit")}
           </Button>
         )}
       </Header>
@@ -356,7 +357,7 @@ export default function KitsIndexPage() {
             <DynamicDropdown
               trigger={
                 <div className="my-2 flex cursor-pointer items-center gap-2 md:my-0">
-                  Custodian{" "}
+                  {t("inventory:custodian")}{" "}
                   <ChevronRight className="hidden rotate-90 md:inline" />
                 </div>
               }
@@ -367,8 +368,8 @@ export default function KitsIndexPage() {
                 // A read FILTER — the workspace custody override governs.
                 custodyPurpose: "custody-filter",
               }}
-              label="Filter by custodian"
-              placeholder="Search team members"
+              label={t("inventory:filterByCustodian")}
+              placeholder={t("inventory:searchTeamMembers")}
               countKey="totalTeamMembers"
               initialDataKey="teamMembers"
               /*
@@ -435,36 +436,30 @@ export default function KitsIndexPage() {
             ItemComponent={ListContent}
             bulkActions={isBase ? undefined : <BulkActionsDropdown />}
             customEmptyStateContent={{
-              title: "No kits yet",
-              text: "Kits let you group related assets together. Create a kit to bundle equipment that's typically used as a set.",
+              title: t("inventory:noKitsYet"),
+              text: t("inventory:noKitsHelp"),
               newButtonRoute: "/kits/new",
-              newButtonContent: "Create your first kit",
+              newButtonContent: t("inventory:createFirstKit"),
             }}
             headerChildren={
               <>
-                <Th>Category</Th>
-                <Th>Location</Th>
-                <Th>Description</Th>
-                <Th>Assets</Th>
+                <Th>{t("inventory:category")}</Th>
+                <Th>{t("inventory:location")}</Th>
+                <Th>{t("inventory:description")}</Th>
+                <Th>{t("inventory:assets")}</Th>
                 <Th className="flex items-center gap-1 whitespace-nowrap">
-                  Custodian{" "}
+                  {t("inventory:custodian")}{" "}
                   <InfoTooltip
                     iconClassName="size-4"
                     content={
                       <>
-                        <h6>Asset custody</h6>
-                        <p>
-                          This column shows if a user has custody of the asset
-                          either via direct assignment or via a booking. If you
-                          see <GrayBadge>private</GrayBadge> that means you
-                          don't have the permissions to see who has custody of
-                          the asset.
-                        </p>
+                        <h6>{t("inventory:assetCustody")}</h6>
+                        <p>{t("inventory:assetCustodyHelp")}</p>
                       </>
                     }
                   />
                 </Th>
-                <Th>Actions</Th>
+                <Th>{t("inventory:actions")}</Th>
               </>
             }
           />

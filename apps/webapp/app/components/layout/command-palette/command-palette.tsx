@@ -15,6 +15,7 @@ import {
   UserIcon,
   UserPlus2Icon,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useRouteLoaderData } from "react-router";
 
 import {
@@ -133,111 +134,117 @@ type CommandContext = {
   isBaseOrSelfService: boolean;
 };
 
-const NAVIGATION_COMMANDS: QuickCommand[] = [
-  {
-    id: "assets",
-    label: "Assets",
-    description: "Browse and manage all assets",
-    href: "/assets",
-    keywords: ["inventory", "items", "equipment"],
-    icon: CompassIcon,
-  },
-  {
-    id: "kits",
-    label: "Kits",
-    description: "Browse and manage asset kits",
-    href: "/kits",
-    keywords: ["packages", "bundles", "collections"],
-    icon: PackageIcon,
-  },
-  {
-    id: "bookings",
-    label: "Bookings",
-    description: "View upcoming and past bookings",
-    href: "/bookings",
-    keywords: ["reservations", "schedule", "calendar"],
-    icon: CalendarIcon,
-    isVisible: ({ canCreateBookings, isPersonalWorkspace }) =>
-      canCreateBookings && !isPersonalWorkspace,
-  },
-  {
-    id: "audits",
-    label: "Audits",
-    description: "View and manage inventory audits",
-    href: "/audits",
-    keywords: ["audits", "audit", "inventory", "check", "verify"],
-    icon: ClipboardCheckIcon,
-    isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
-  },
-  {
-    id: "team",
-    label: "Team",
-    description: "Manage team members and roles",
-    href: "/settings/team/users",
-    keywords: ["users", "members", "people"],
-    icon: UserPlus2Icon,
-    isVisible: ({ isPersonalWorkspace, isBaseOrSelfService }) =>
-      !isPersonalWorkspace && !isBaseOrSelfService,
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    description: "Adjust organization preferences",
-    href: "/settings",
-    keywords: ["preferences", "configuration"],
-    icon: SettingsIcon,
-    isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
-  },
-  {
-    id: "home",
-    label: "Home",
-    description: "See analytics and key metrics",
-    href: "/home",
-    keywords: ["overview", "analytics", "dashboard"],
-    icon: HomeIcon,
-    isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
-  },
-];
+type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-const ACTION_COMMANDS: QuickAction[] = [
-  {
-    id: "create-asset",
-    label: "Create asset",
-    description: "Add a new asset to your inventory",
-    href: "/assets/new",
-    keywords: ["new", "asset", "inventory"],
-    icon: FilePlus2Icon,
-    isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
-  },
-  {
-    id: "create-kit",
-    label: "Create kit",
-    description: "Bundle assets into a new kit",
-    href: "/kits/new",
-    keywords: ["new", "kit", "inventory", "collection"],
-    icon: PackageIcon,
-    isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
-  },
-  {
-    id: "create-booking",
-    label: "Create booking",
-    description: "Reserve assets for a new booking",
-    href: "/bookings/new",
-    keywords: ["book", "reservation", "calendar"],
-    icon: CalendarIcon,
-    isVisible: ({ canCreateBookings }) => canCreateBookings,
-  },
-  {
-    id: "invite-user",
-    label: "Invite user",
-    description: "Send an invite to a teammate",
-    href: "/settings/team/invites",
-    keywords: ["team", "user", "invite"],
-    icon: UserPlus2Icon,
-    isVisible: ({ canInviteUsers, isPersonalWorkspace }) =>
-      canInviteUsers && !isPersonalWorkspace,
-  },
-];
+function getNavigationCommands(t: Translate): QuickCommand[] {
+  return [
+    {
+      id: "assets",
+      label: t("navigation:assets"),
+      description: t("command:browseAssets"),
+      href: "/assets",
+      keywords: ["inventory", "items", "equipment"],
+      icon: CompassIcon,
+    },
+    {
+      id: "kits",
+      label: t("navigation:kits"),
+      description: t("command:browseKits"),
+      href: "/kits",
+      keywords: ["packages", "bundles", "collections"],
+      icon: PackageIcon,
+    },
+    {
+      id: "bookings",
+      label: t("navigation:bookings"),
+      description: t("command:browseBookings"),
+      href: "/bookings",
+      keywords: ["reservations", "schedule", "calendar"],
+      icon: CalendarIcon,
+      isVisible: ({ canCreateBookings, isPersonalWorkspace }) =>
+        canCreateBookings && !isPersonalWorkspace,
+    },
+    {
+      id: "audits",
+      label: t("navigation:audits"),
+      description: t("command:browseAudits"),
+      href: "/audits",
+      keywords: ["audits", "audit", "inventory", "check", "verify"],
+      icon: ClipboardCheckIcon,
+      isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
+    },
+    {
+      id: "team",
+      label: t("navigation:team"),
+      description: t("command:manageTeam"),
+      href: "/settings/team/users",
+      keywords: ["users", "members", "people"],
+      icon: UserPlus2Icon,
+      isVisible: ({ isPersonalWorkspace, isBaseOrSelfService }) =>
+        !isPersonalWorkspace && !isBaseOrSelfService,
+    },
+    {
+      id: "settings",
+      label: t("navigation:workspaceSettings"),
+      description: t("command:manageSettings"),
+      href: "/settings",
+      keywords: ["preferences", "configuration"],
+      icon: SettingsIcon,
+      isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
+    },
+    {
+      id: "home",
+      label: t("navigation:home"),
+      description: t("command:viewHome"),
+      href: "/home",
+      keywords: ["overview", "analytics", "dashboard"],
+      icon: HomeIcon,
+      isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
+    },
+  ];
+}
+
+function getActionCommands(t: Translate): QuickAction[] {
+  return [
+    {
+      id: "create-asset",
+      label: t("command:createAsset"),
+      description: t("command:createAssetHelp"),
+      href: "/assets/new",
+      keywords: ["new", "asset", "inventory"],
+      icon: FilePlus2Icon,
+      isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
+    },
+    {
+      id: "create-kit",
+      label: t("command:createKit"),
+      description: t("command:createKitHelp"),
+      href: "/kits/new",
+      keywords: ["new", "kit", "inventory", "collection"],
+      icon: PackageIcon,
+      isVisible: ({ isBaseOrSelfService }) => !isBaseOrSelfService,
+    },
+    {
+      id: "create-booking",
+      label: t("command:createBooking"),
+      description: t("command:createBookingHelp"),
+      href: "/bookings/new",
+      keywords: ["book", "reservation", "calendar"],
+      icon: CalendarIcon,
+      isVisible: ({ canCreateBookings }) => canCreateBookings,
+    },
+    {
+      id: "invite-user",
+      label: t("command:inviteUser"),
+      description: t("command:inviteUserHelp"),
+      href: "/settings/team/invites",
+      keywords: ["team", "user", "invite"],
+      icon: UserPlus2Icon,
+      isVisible: ({ canInviteUsers, isPersonalWorkspace }) =>
+        canInviteUsers && !isPersonalWorkspace,
+    },
+  ];
+}
 
 function getShortcutLabel() {
   if (typeof navigator === "undefined") {
@@ -281,7 +288,11 @@ export function getAssetCommandValue(asset: AssetSearchResult) {
   return [`asset-${asset.id}`, ...searchableFields].join(" ").trim();
 }
 
-function getAssetSubtitle(asset: AssetSearchResult, query: string): string {
+function getAssetSubtitle(
+  asset: AssetSearchResult,
+  query: string,
+  t: Translate
+): string {
   const lowercaseQuery = query.toLowerCase().trim();
 
   // Check if query matches any QR codes
@@ -299,7 +310,7 @@ function getAssetSubtitle(asset: AssetSearchResult, query: string): string {
     barcode.toLowerCase().includes(lowercaseQuery)
   );
   if (matchingBarcode) {
-    return `Barcode: ${matchingBarcode}${
+    return `${t("command:barcode")}: ${matchingBarcode}${
       asset.locationName ? ` • ${asset.locationName}` : ""
     }`;
   }
@@ -309,7 +320,7 @@ function getAssetSubtitle(asset: AssetSearchResult, query: string): string {
     asset.categoryName &&
     asset.categoryName.toLowerCase().includes(lowercaseQuery)
   ) {
-    return `Category: ${asset.categoryName}${
+    return `${t("command:category")}: ${asset.categoryName}${
       asset.locationName ? ` • ${asset.locationName}` : ""
     }`;
   }
@@ -319,7 +330,7 @@ function getAssetSubtitle(asset: AssetSearchResult, query: string): string {
     tag.toLowerCase().includes(lowercaseQuery)
   );
   if (matchingTag) {
-    return `Tag: ${matchingTag}${
+    return `${t("command:tag")}: ${matchingTag}${
       asset.locationName ? ` • ${asset.locationName}` : ""
     }`;
   }
@@ -329,7 +340,7 @@ function getAssetSubtitle(asset: AssetSearchResult, query: string): string {
     asset.custodianName &&
     asset.custodianName.toLowerCase().includes(lowercaseQuery)
   ) {
-    return `Custodian: ${asset.custodianName}${
+    return `${t("command:custodian")}: ${asset.custodianName}${
       asset.locationName ? ` • ${asset.locationName}` : ""
     }`;
   }
@@ -339,7 +350,7 @@ function getAssetSubtitle(asset: AssetSearchResult, query: string): string {
     asset.custodianUserName &&
     asset.custodianUserName.toLowerCase().includes(lowercaseQuery)
   ) {
-    return `Custodian: ${asset.custodianUserName}${
+    return `${t("command:custodian")}: ${asset.custodianUserName}${
       asset.locationName ? ` • ${asset.locationName}` : ""
     }`;
   }
@@ -354,7 +365,7 @@ function getAssetSubtitle(asset: AssetSearchResult, query: string): string {
       stringValue.length > 30
         ? stringValue.substring(0, 27) + "..."
         : stringValue;
-    return `Custom field: ${truncatedValue}${
+    return `${t("command:customField")}: ${truncatedValue}${
       asset.locationName ? ` • ${asset.locationName}` : ""
     }`;
   }
@@ -368,7 +379,7 @@ function getAssetSubtitle(asset: AssetSearchResult, query: string): string {
       asset.description.length > 40
         ? asset.description.substring(0, 37) + "..."
         : asset.description;
-    return `Description: ${truncatedDesc}${
+    return `${t("command:description")}: ${truncatedDesc}${
       asset.locationName ? ` • ${asset.locationName}` : ""
     }`;
   }
@@ -481,6 +492,7 @@ export function getTeamMemberHref(member: TeamMemberSearchResult) {
 
 // react-doctor:no-giant-component — deferred for follow-up refactor
 export function CommandPalette() {
+  const { t } = useTranslation();
   const { open, setOpen } = useCommandPalette();
   const navigate = useNavigate();
   const { formatDate } = useDateFormatter();
@@ -531,6 +543,9 @@ export function CommandPalette() {
     ]
   );
 
+  const navigationCommands = useMemo(() => getNavigationCommands(t), [t]);
+  const actionCommands = useMemo(() => getActionCommands(t), [t]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
@@ -568,10 +583,10 @@ export function CommandPalette() {
 
   const availableNavigation = useMemo(
     () =>
-      NAVIGATION_COMMANDS.filter((nav) =>
+      navigationCommands.filter((nav) =>
         nav.isVisible ? nav.isVisible(commandContext) : true
       ),
-    [commandContext]
+    [commandContext, navigationCommands]
   );
 
   const navigationResults = useMemo(() => {
@@ -590,10 +605,10 @@ export function CommandPalette() {
 
   const availableActions = useMemo(
     () =>
-      ACTION_COMMANDS.filter((action) =>
+      actionCommands.filter((action) =>
         action.isVisible ? action.isVisible(commandContext) : true
       ),
-    [commandContext]
+    [actionCommands, commandContext]
   );
 
   const actionResults = useMemo(() => {
@@ -673,26 +688,26 @@ export function CommandPalette() {
         ref={inputRef}
         value={query}
         onValueChange={setQuery}
-        placeholder="Search assets, audits, kits, bookings, locations, team members..."
+        placeholder={t("command:searchPlaceholder")}
         className="my-4 rounded border-gray-100"
       />
       <CommandList className="divide-y divide-gray-100">
         <CommandEmpty>
           {isSearching ? (
             <span className="flex items-center gap-2 text-gray-500">
-              <Spinner className="size-4" /> Searching...
+              <Spinner className="size-4" /> {t("command:searching")}
             </span>
           ) : errorMessage ? (
             <span className="text-error-600">
-              {errorMessage || "Something went wrong"}
+              {errorMessage ? t("command:searchFailed") : null}
             </span>
           ) : (
-            "No results found"
+            t("command:noResults")
           )}
         </CommandEmpty>
 
         {assetMatches.length > 0 ? (
-          <CommandGroup heading="Assets">
+          <CommandGroup heading={t("navigation:assets")}>
             {assetMatches.map((asset) => (
               <CommandItem
                 key={asset.id}
@@ -713,7 +728,7 @@ export function CommandPalette() {
                     {asset.title}
                   </span>
                   <span className="truncate text-xs text-gray-500">
-                    {getAssetSubtitle(asset, debouncedQuery)}
+                    {getAssetSubtitle(asset, debouncedQuery, t)}
                   </span>
                 </div>
               </CommandItem>
@@ -722,7 +737,7 @@ export function CommandPalette() {
         ) : null}
 
         {auditResults.length > 0 ? (
-          <CommandGroup heading="Audits">
+          <CommandGroup heading={t("navigation:audits")}>
             {auditResults.map((audit) => (
               <CommandItem
                 key={audit.id}
@@ -737,7 +752,11 @@ export function CommandPalette() {
                   </span>
                   <span className="truncate text-xs text-gray-500">
                     {audit.status}
-                    {audit.dueDate ? ` • Due ${formatDate(audit.dueDate)}` : ""}
+                    {audit.dueDate
+                      ? ` • ${t("command:dueDate", {
+                          date: formatDate(audit.dueDate),
+                        })}`
+                      : ""}
                     {audit.description ? ` • ${audit.description}` : ""}
                   </span>
                 </div>
@@ -747,7 +766,7 @@ export function CommandPalette() {
         ) : null}
 
         {kitResults.length > 0 ? (
-          <CommandGroup heading="Kits">
+          <CommandGroup heading={t("navigation:kits")}>
             {kitResults.map((kit) => (
               <CommandItem
                 key={kit.id}
@@ -761,7 +780,8 @@ export function CommandPalette() {
                     {kit.name}
                   </span>
                   <span className="truncate text-xs text-gray-500">
-                    {kit.status} • {kit.assetCount} assets
+                    {kit.status} •{" "}
+                    {t("command:assetCount", { count: kit.assetCount })}
                     {kit.description ? ` • ${kit.description}` : ""}
                   </span>
                 </div>
@@ -771,7 +791,7 @@ export function CommandPalette() {
         ) : null}
 
         {bookingResults.length > 0 ? (
-          <CommandGroup heading="Bookings">
+          <CommandGroup heading={t("navigation:bookings")}>
             {bookingResults.map((booking) => (
               <CommandItem
                 key={booking.id}
@@ -800,7 +820,7 @@ export function CommandPalette() {
         ) : null}
 
         {locationResults.length > 0 ? (
-          <CommandGroup heading="Locations">
+          <CommandGroup heading={t("navigation:locations")}>
             {locationResults.map((location) => (
               <CommandItem
                 key={location.id}
@@ -814,7 +834,7 @@ export function CommandPalette() {
                     {location.name}
                   </span>
                   <span className="truncate text-xs text-gray-500">
-                    {location.assetCount} assets
+                    {t("command:assetCount", { count: location.assetCount })}
                     {location.address ? ` • ${location.address}` : ""}
                     {location.description ? ` • ${location.description}` : ""}
                   </span>
@@ -825,7 +845,7 @@ export function CommandPalette() {
         ) : null}
 
         {teamMemberResults.length > 0 ? (
-          <CommandGroup heading="Team Members">
+          <CommandGroup heading={t("command:teamMembers")}>
             {teamMemberResults.map((member) => (
               <CommandItem
                 key={member.id}
@@ -852,7 +872,7 @@ export function CommandPalette() {
                     })}
                   </span>
                   <span className="truncate text-xs text-gray-500">
-                    {member.email || "NRM"}
+                    {member.email || t("command:nonRegisteredMember")}
                   </span>
                 </div>
               </CommandItem>
@@ -861,7 +881,7 @@ export function CommandPalette() {
         ) : null}
 
         {navigationResults.length > 0 ? (
-          <CommandGroup heading="Navigation">
+          <CommandGroup heading={t("command:navigation")}>
             {navigationResults.map((command) => (
               <CommandItem
                 key={command.id}
@@ -892,7 +912,7 @@ export function CommandPalette() {
         ) : null}
 
         {actionResults.length > 0 ? (
-          <CommandGroup heading="Quick actions">
+          <CommandGroup heading={t("command:quickActions")}>
             {actionResults.map((command) => (
               <CommandItem
                 key={command.id}
@@ -927,16 +947,18 @@ export function CommandPalette() {
         <div className="flex items-center gap-2">
           <SearchIcon className="size-4" />
           {isPersonalOrg(layoutData?.currentOrganization)
-            ? "Search across all assets, audits, kits, and locations"
-            : "Search across all assets, audits, kits, bookings, locations, and team members"}
+            ? t("command:searchHintWithoutBookings")
+            : t("command:searchHintWithBookings")}
         </div>
         <CommandShortcut className={tw("bg-white")}>
           {shortcutLabel}
         </CommandShortcut>
       </div>
       <div className="border-t border-gray-100 px-4 pb-4 pt-2 text-[11px] text-gray-400">
-        <span className="font-medium text-gray-500">Keyboard tips:</span> ↑↓ to
-        navigate • ↵ to select • esc to close
+        <span className="font-medium text-gray-500">
+          {t("command:keyboardTips")}
+        </span>{" "}
+        {t("command:keyboardHelp")}
       </div>
     </CommandDialog>
   );

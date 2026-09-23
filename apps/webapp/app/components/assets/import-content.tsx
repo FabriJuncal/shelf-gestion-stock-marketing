@@ -7,6 +7,7 @@
  */
 import type { ChangeEvent } from "react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAutoFocus } from "~/hooks/use-auto-focus";
 import { useDisabled } from "~/hooks/use-disabled";
 import useFetcherWithReset from "~/hooks/use-fetcher-with-reset";
@@ -36,11 +37,12 @@ import When from "../when/when";
  * Displays instructions, rules, and embeds the FileForm for upload.
  */
 export const ImportContent = () => {
+  const { t } = useTranslation();
   const { canUseBarcodes } = useBarcodePermissions();
 
   return (
     <div className="w-full text-left">
-      <h3>Import assets</h3>
+      <h3>{t("inventory:importAssets")}</h3>
 
       {/* Intent fork */}
       <div className="my-4 flex gap-3 rounded-md border border-gray-200 bg-gray-50 p-4">
@@ -50,18 +52,17 @@ export const ImportContent = () => {
           className="mt-0.5 shrink-0 text-gray-500"
         />
         <p className="text-[14px] text-gray-600">
-          <b>Want to update existing assets instead?</b> If you've exported
-          assets from the Asset Index and made changes in Excel, you can
-          re-import them to bulk update.{" "}
+          <b>{t("inventory:updateAssetsInstead")}</b>{" "}
+          {t("inventory:updateAssetsInsteadHelp")}{" "}
           <Button variant="link" to="/assets/import-update">
-            Go to bulk update →
+            {t("inventory:goToBulkUpdate")}
           </Button>
         </p>
       </div>
 
-      <h4>Create new assets from CSV</h4>
+      <h4>{t("inventory:createAssetsFromCsv")}</h4>
       <p>
-        Upload a CSV file to create new assets. Start with our{" "}
+        {t("inventory:createAssetsFromCsvHelp")}{" "}
         <Button
           variant="link"
           to={
@@ -72,16 +73,15 @@ export const ImportContent = () => {
           target="_blank"
           download
         >
-          CSV template
+          {t("inventory:csvTemplate")}
         </Button>{" "}
-        — each row becomes a new asset.
+        {t("inventory:csvTemplateOutcome")}
       </p>
 
       <WarningBox className="my-4">
         <>
-          <strong>IMPORTANT</strong>: Do not use data exported from asset backup
-          to import assets. You must use the template provided above or you will
-          get corrupted data.
+          <strong>{t("inventory:important")}</strong>:{" "}
+          {t("inventory:importBackupWarning")}
         </>
       </WarningBox>
 
@@ -94,29 +94,13 @@ export const ImportContent = () => {
             className="mt-0.5 shrink-0 text-gray-500"
           />
           <div>
-            <h5 className="font-semibold">Base rules</h5>
+            <h5 className="font-semibold">{t("inventory:baseRules")}</h5>
             <ul className="list-inside list-disc text-[14px] text-gray-600">
-              <li>
-                Use <b>, (comma)</b> or <b>; (semicolon)</b> as delimiter
-              </li>
-              <li>
-                Columns like <b>kit, category, location & custodian</b>{" "}
-                represent the name of the related entry — if it doesn't exist,
-                we'll create it
-              </li>
-              <li>
-                <b>Tags</b> can be comma-separated — missing tags will be
-                created automatically
-              </li>
-              <li>
-                Each row creates a <b>new</b> asset — existing assets will not
-                be merged or overwritten
-              </li>
-              <li>
-                To onboard stock-room consumables (boxes, batteries, fasteners),
-                or to link items to a reusable asset model, see{" "}
-                <b>"Quantity-tracked assets"</b> below
-              </li>
+              <li>{t("inventory:csvDelimiterRule")}</li>
+              <li>{t("inventory:csvRelatedColumnsRule")}</li>
+              <li>{t("inventory:csvTagsRule")}</li>
+              <li>{t("inventory:csvNewAssetRule")}</li>
+              <li>{t("inventory:csvQuantityTrackedRule")}</li>
             </ul>
           </div>
         </div>
@@ -129,10 +113,9 @@ export const ImportContent = () => {
             className="mt-0.5 shrink-0 text-gray-500"
           />
           <div>
-            <h5 className="font-semibold">Custom fields</h5>
+            <h5 className="font-semibold">{t("inventory:customFields")}</h5>
             <p className="text-[14px] text-gray-600">
-              Prefix your column heading with <b>"cf: "</b> and add the type
-              after a comma. Supported types:
+              {t("inventory:csvCustomFieldsHelp")}
             </p>
             <ul className="list-inside list-disc pl-2 text-[14px] text-gray-600">
               <li>
@@ -150,7 +133,7 @@ export const ImportContent = () => {
               </li>
             </ul>
             <p className="mt-1 text-[14px] text-gray-600">
-              Example header: <b>"cf:purchase date, type:date"</b>
+              {t("inventory:csvCustomFieldsExample")}
             </p>
           </div>
         </div>
@@ -163,32 +146,18 @@ export const ImportContent = () => {
             className="mt-0.5 shrink-0 text-gray-500"
           />
           <div>
-            <h5 className="font-semibold">QR codes</h5>
+            <h5 className="font-semibold">{t("inventory:qrCodes")}</h5>
             <p className="text-[14px] text-gray-600">
-              You can link a Shelf QR code to each asset. This is useful if you
-              already have QR codes printed and want to connect them to the
-              assets you're importing. Limitations:
+              {t("inventory:csvQrCodesHelp")}
             </p>
             <ul className="list-inside list-disc pl-2 text-[14px] text-gray-600">
-              <li>
-                <b>Existing code</b> — the QR code must already exist in Shelf
-              </li>
-              <li>
-                <b>No duplicates</b> — each qrId must be unique per asset
-              </li>
-              <li>
-                <b>No linked codes</b> — the qrId must not already be linked to
-                another asset or kit
-              </li>
-              <li>
-                <b>QR ownership</b> — the code must be unclaimed or belong to
-                your organization
-              </li>
+              <li>{t("inventory:csvQrExistingCodeRule")}</li>
+              <li>{t("inventory:csvQrNoDuplicatesRule")}</li>
+              <li>{t("inventory:csvQrNoLinkedCodesRule")}</li>
+              <li>{t("inventory:csvQrOwnershipRule")}</li>
             </ul>
             <p className="mt-1 text-[14px] text-gray-600">
-              If no <b>"qrId"</b> is provided, a new QR code will be generated.
-              Need unclaimed or unlinked codes? Contact support and we can
-              provide them.
+              {t("inventory:csvQrFallbackHelp")}
             </p>
           </div>
         </div>
@@ -202,9 +171,9 @@ export const ImportContent = () => {
               className="mt-0.5 shrink-0 text-gray-500"
             />
             <div>
-              <h5 className="font-semibold">Barcodes</h5>
+              <h5 className="font-semibold">{t("inventory:barcodes")}</h5>
               <p className="text-[14px] text-gray-600">
-                Import assets with barcodes using these columns:
+                {t("inventory:csvBarcodesHelp")}
               </p>
               <ul className="list-inside list-disc pl-2 text-[14px] text-gray-600">
                 <li>
@@ -226,12 +195,7 @@ export const ImportContent = () => {
                 </li>
               </ul>
               <p className="mt-1 text-[14px] text-gray-600">
-                <b>Rules:</b> Use comma separation for multiple barcodes of the
-                same type (e.g., "ABC123,DEF456"). Each value must be unique in
-                your organization. Code39 and DataMatrix allow only letters and
-                numbers; Code128 supports most symbols. Values are automatically
-                converted to uppercase. Leave barcode columns empty if you don't
-                want to assign barcodes.
+                {t("inventory:csvBarcodesRules")}
               </p>
             </div>
           </div>
@@ -245,11 +209,11 @@ export const ImportContent = () => {
             className="mt-0.5 shrink-0 text-gray-500"
           />
           <div>
-            <h5 className="font-semibold">Quantity-tracked assets</h5>
+            <h5 className="font-semibold">
+              {t("inventory:quantityTrackedAssets")}
+            </h5>
             <p className="text-[14px] text-gray-600">
-              Six optional columns let you onboard stock-room consumables
-              (boxes, batteries, fasteners) and link individually-tracked assets
-              to a reusable asset model:
+              {t("inventory:csvQuantityTrackedHelp")}
             </p>
             <ul className="list-inside list-disc pl-2 text-[14px] text-gray-600">
               <li>
@@ -291,10 +255,7 @@ export const ImportContent = () => {
               </li>
             </ul>
             <p className="mt-1 text-[14px] text-gray-600">
-              <b>Tip:</b> the downloaded template above already contains one{" "}
-              <code>INDIVIDUAL</code> example with an <code>assetModel</code>{" "}
-              and one <code>QUANTITY_TRACKED</code> example with{" "}
-              <code>quantity</code> and <code>consumptionType</code> filled in.
+              {t("inventory:csvQuantityTrackedTip")}
             </p>
           </div>
         </div>
@@ -307,14 +268,10 @@ export const ImportContent = () => {
             className="mt-0.5 shrink-0 text-gray-500"
           />
           <div>
-            <h5 className="font-semibold">Good to know</h5>
+            <h5 className="font-semibold">{t("inventory:goodToKnow")}</h5>
             <ul className="list-inside list-disc text-[14px] text-gray-600">
-              <li>
-                The first row is used as column headers — it won't be imported
-              </li>
-              <li>
-                If any data in the file is invalid, the whole import will fail
-              </li>
+              <li>{t("inventory:csvHeaderRowRule")}</li>
+              <li>{t("inventory:csvInvalidDataRule")}</li>
             </ul>
           </div>
         </div>
@@ -346,6 +303,7 @@ export const ImportContent = () => {
  * @param url - Optional custom action URL for the form
  */
 export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
+  const { t } = useTranslation();
   // Widened to `string` so toUpperCase() doesn't need a cast.
   // The "I AGREE" check happens at submit time.
   const [agreed, setAgreed] = useState("");
@@ -388,7 +346,7 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
       <Input
         type="file"
         name="file"
-        label="Select a csv file"
+        label={t("inventory:selectCsvFile")}
         required
         onChange={handleFileSelect}
         accept=".csv"
@@ -408,27 +366,28 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
         <AlertDialogTrigger asChild>
           <Button
             type="button"
-            title={"Confirm asset import"}
+            title={t("inventory:confirmAssetImport")}
             disabled={!selectedFile}
             className="my-4"
           >
-            Confirm asset import
+            {t("inventory:confirmAssetImport")}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent className="max-w-[600px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm asset import</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("inventory:confirmAssetImport")}
+            </AlertDialogTitle>
             {!isSuccessful ? (
               <>
                 <AlertDialogDescription>
-                  You need to type: <b>"I AGREE"</b> in the field below to
-                  accept the import. By doing this you agree that you have read
-                  the requirements and you understand the limitations and
-                  consequences of using this feature.
+                  {t("inventory:importConfirmationHelp", {
+                    confirmation: "I AGREE",
+                  })}
                 </AlertDialogDescription>
                 <Input
                   type="text"
-                  label={"Confirmation"}
+                  label={t("inventory:confirmation")}
                   ref={agreeInputRef}
                   name="agree"
                   value={agreed}
@@ -456,7 +415,7 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
               <p className="text-red-500">{data?.error?.message}</p>
               {data?.error?.additionalData?.duplicateCodes ? (
                 <BrokenQrCodesTable
-                  title="Duplicate codes"
+                  title={t("inventory:duplicateCodes")}
                   data={
                     data.error.additionalData
                       .duplicateCodes as QRCodePerImportedAsset[]
@@ -465,7 +424,7 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
               ) : null}
               {data?.error?.additionalData?.nonExistentCodes ? (
                 <BrokenQrCodesTable
-                  title="Non existent codes"
+                  title={t("inventory:nonExistentCodes")}
                   data={
                     data.error.additionalData
                       .nonExistentCodes as QRCodePerImportedAsset[]
@@ -474,7 +433,7 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
               ) : null}
               {data?.error?.additionalData?.linkedCodes ? (
                 <BrokenQrCodesTable
-                  title="Already linked codes"
+                  title={t("inventory:alreadyLinkedCodes")}
                   data={
                     data.error.additionalData
                       .linkedCodes as QRCodePerImportedAsset[]
@@ -483,7 +442,7 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
               ) : null}
               {data?.error?.additionalData?.connectedToOtherOrgs ? (
                 <BrokenQrCodesTable
-                  title="Some codes do not belong to this organization"
+                  title={t("inventory:codesOtherOrganization")}
                   data={
                     data.error.additionalData
                       .connectedToOtherOrgs as QRCodePerImportedAsset[]
@@ -505,16 +464,16 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
                   <thead className="bg-error-100 text-xs">
                     <tr>
                       <th scope="col" className="px-2 py-1">
-                        Asset
+                        {t("inventory:asset")}
                       </th>
                       <th scope="col" className="px-2 py-1">
-                        Custodian
+                        {t("inventory:custodian")}
                       </th>
                       <th scope="col" className="px-2 py-1">
-                        Kit
+                        {t("inventory:kit")}
                       </th>
                       <th scope="col" className="px-2 py-1">
-                        Issue
+                        {t("inventory:error")}
                       </th>
                     </tr>
                   </thead>
@@ -549,10 +508,10 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
                   <thead className="bg-error-100 text-xs">
                     <tr>
                       <th scope="col" className="px-2 py-1">
-                        Incorrect Header
+                        {t("inventory:incorrectHeader")}
                       </th>
                       <th scope="col" className="px-2 py-1">
-                        Error
+                        {t("inventory:error")}
                       </th>
                     </tr>
                   </thead>
@@ -572,17 +531,14 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
                 </table>
               ) : null}
 
-              <p className="mt-2">
-                Please fix your CSV file and try again. If the issue persists,
-                don't hesitate to get in touch with us.
-              </p>
+              <p className="mt-2">{t("inventory:fixCsvHelp")}</p>
             </div>
           </When>
 
           <When truthy={isSuccessful}>
             <div>
-              <b className="text-green-500">Success!</b>
-              <p>Your assets have been imported.</p>
+              <b className="text-green-500">{t("inventory:importSuccess")}</b>
+              <p>{t("inventory:assetsImported")}</p>
             </div>
           </When>
 
@@ -591,18 +547,18 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
               <div className="flex gap-2">
                 <AlertDialogCancel asChild>
                   <Button type="button" variant="secondary" width="full">
-                    Close
+                    {t("common:close")}
                   </Button>
                 </AlertDialogCancel>
                 <Button to="/assets" width="full" className="whitespace-nowrap">
-                  View new assets
+                  {t("inventory:viewNewAssets")}
                 </Button>
               </div>
             ) : (
               <>
                 <AlertDialogCancel asChild>
                   <Button type="button" variant="secondary">
-                    Cancel
+                    {t("common:cancel")}
                   </Button>
                 </AlertDialogCancel>
                 <Button
@@ -613,7 +569,9 @@ export const FileForm = ({ intent, url }: { intent: string; url?: string }) => {
                   }}
                   disabled={disabled}
                 >
-                  {isSubmitting ? "Importing..." : "Import"}
+                  {isSubmitting
+                    ? t("inventory:importing")
+                    : t("inventory:import")}
                 </Button>
               </>
             )}
@@ -631,14 +589,15 @@ function BrokenQrCodesTable({
   title: string;
   data: QRCodePerImportedAsset[];
 }) {
+  const { t } = useTranslation();
   return (
     <div className="mt-3">
       <h5>{title}</h5>
       <Table className="mt-1 [&_td]:p-1 [&_th]:p-1">
         <thead>
           <Tr>
-            <Th>Asset title</Th>
-            <Th>QR ID</Th>
+            <Th>{t("inventory:assetTitle")}</Th>
+            <Th>{t("inventory:qrId")}</Th>
           </Tr>
         </thead>
         <tbody>
@@ -655,14 +614,15 @@ function BrokenQrCodesTable({
 }
 
 function DuplicateBarcodesTable({ data }: { data: DuplicateBarcode[] }) {
+  const { t } = useTranslation();
   return (
     <div className="mt-3">
-      <h5>Duplicate barcodes</h5>
+      <h5>{t("inventory:duplicateBarcodes")}</h5>
       <Table className="mt-1 [&_td]:p-1 [&_th]:p-1">
         <thead>
           <Tr>
-            <Th>Barcode</Th>
-            <Th>Used by assets</Th>
+            <Th>{t("inventory:barcode")}</Th>
+            <Th>{t("inventory:usedByAssets")}</Th>
           </Tr>
         </thead>
         <tbody>

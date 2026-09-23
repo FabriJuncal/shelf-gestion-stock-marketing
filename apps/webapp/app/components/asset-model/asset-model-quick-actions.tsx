@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { AssetModel } from "@prisma/client";
 import { PencilIcon, Trash2Icon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "~/components/shared/button";
 import When from "~/components/when/when";
 import { useUserRoleHelper } from "~/hooks/user-user-role-helper";
@@ -23,6 +24,7 @@ export default function AssetModelQuickActions({
   style,
   assetModel,
 }: AssetModelQuickActionsProps) {
+  const { t } = useTranslation();
   const { roles } = useUserRoleHelper();
 
   return (
@@ -39,8 +41,8 @@ export default function AssetModelQuickActions({
           variant="secondary"
           className={"p-2"}
           to={`${assetModel.id}/edit`}
-          aria-label="Edit asset model"
-          tooltip="Edit asset model"
+          aria-label={t("inventory:editAssetModel")}
+          tooltip={t("inventory:editAssetModel")}
         >
           <PencilIcon className="size-4" />
         </Button>
@@ -61,8 +63,8 @@ export default function AssetModelQuickActions({
               size="sm"
               variant="secondary"
               className={"p-2"}
-              aria-label="Delete asset model"
-              tooltip="Delete asset model"
+              aria-label={t("inventory:deleteAssetModel")}
+              tooltip={t("inventory:deleteAssetModel")}
             >
               <Trash2Icon className="size-4" />
             </Button>

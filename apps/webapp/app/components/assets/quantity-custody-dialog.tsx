@@ -14,6 +14,7 @@
 
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useFetcher } from "react-router";
 import DynamicSelect from "~/components/dynamic-select/dynamic-select";
 import Input from "~/components/forms/input";
@@ -78,6 +79,7 @@ export function QuantityCustodyDialog({
   onOpenChange: controlledOnOpenChange,
   inKit,
 }: QuantityCustodyDialogProps) {
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -99,7 +101,7 @@ export function QuantityCustodyDialog({
   const disabled = useDisabled(fetcher);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const unitLabel = unitOfMeasure || "units";
+  const unitLabel = unitOfMeasure || t("inventory:units");
   const isSubmitting = isFormProcessing(fetcher.state);
 
   /** Close the dialog and reset state after a successful submission */
@@ -119,22 +121,22 @@ export function QuantityCustodyDialog({
 
       <AlertDialogContent onEscapeKeyDown={() => setOpen(false)}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Assign Quantity Custody</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("inventory:assignQuantityCustody")}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Assign a quantity of this asset to a team member. Select who
-            receives custody and how many {unitLabel} to assign.
+            {t("inventory:assignQuantityCustodyHelp", { unit: unitLabel })}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         {inKit ? (
           <div className="rounded border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
             <p>
-              This asset is part of kit{" "}
+              {t("inventory:assetPartOfKit")}{" "}
               <Link to={`/kits/${inKit.id}`} className="font-medium underline">
                 {inKit.name}
               </Link>
-              . Operator custody you assign here is tracked separately from the
-              kit's allocation — the kit's "in kit" count is unaffected.
+              . {t("inventory:kitCustodyAllocationHelp")}
             </p>
           </div>
         ) : null}
@@ -165,10 +167,10 @@ export function QuantityCustodyDialog({
                   custodyPurpose: "custody-assignment",
                 }}
                 fieldName="teamMemberSelect"
-                contentLabel="Team members"
+                contentLabel={t("inventory:searchTeamMembers")}
                 initialDataKey="teamMembers"
                 countKey="totalTeamMembers"
-                placeholder="Select a team member"
+                placeholder={t("inventory:selectTeamMember")}
                 allowClear
                 closeOnSelect
                 transformItem={(item) => ({
@@ -186,11 +188,11 @@ export function QuantityCustodyDialog({
             <Input
               name="quantity"
               type="number"
-              label={`Quantity (${unitLabel})`}
+              label={t("inventory:quantityWithUnit", { unit: unitLabel })}
               placeholder={
                 availableQuantity != null
-                  ? `Max: ${availableQuantity}`
-                  : "Enter quantity"
+                  ? t("inventory:maxQuantity", { count: availableQuantity })
+                  : t("inventory:enterQuantity")
               }
               min={1}
               max={availableQuantity ?? undefined}
@@ -201,8 +203,8 @@ export function QuantityCustodyDialog({
             <Input
               name="note"
               inputType="textarea"
-              label="Note (optional)"
-              placeholder="Reason for assignment..."
+              label={t("inventory:optionalNote")}
+              placeholder={t("inventory:assignmentReason")}
               rows={2}
             />
           </div>
@@ -210,12 +212,12 @@ export function QuantityCustodyDialog({
           <AlertDialogFooter className="mt-4 gap-2">
             <AlertDialogCancel asChild>
               <Button type="button" variant="secondary" disabled={isSubmitting}>
-                Cancel
+                {t("common:cancel")}
               </Button>
             </AlertDialogCancel>
 
             <Button type="submit" variant="primary" disabled={disabled}>
-              {isSubmitting ? "Assigning..." : "Assign"}
+              {isSubmitting ? t("inventory:assigning") : t("inventory:assign")}
             </Button>
           </AlertDialogFooter>
         </fetcher.Form>

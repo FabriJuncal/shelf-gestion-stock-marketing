@@ -1,8 +1,11 @@
+import { useTranslation } from "react-i18next";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import { data, Link, Outlet, useRouteLoaderData } from "react-router";
 import { ErrorContent } from "~/components/errors";
 import Header from "~/components/layout/header";
 import HorizontalTabs from "~/components/layout/horizontal-tabs";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import type { loader as layoutLoader } from "~/routes/_layout+/_layout";
 import { appendToMetaTitle } from "~/utils/append-to-meta-title";
 import { makeShelfError } from "~/utils/error";
@@ -28,8 +31,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
       action: PermissionAction.read,
     });
 
-    const title = "Account Details";
-    const subHeading = "Manage your preferences here.";
+    const i18n = createI18n(await resolveRequestLanguage({ request }));
+    const title = i18n.t("settings:accountTitle");
+    const subHeading = i18n.t("settings:description");
     const header = {
       title,
       subHeading,
@@ -49,10 +53,11 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 export const shouldRevalidate = () => false;
 
 export default function AccountDetailsPage() {
+  const { t } = useTranslation();
   const items = [
-    { to: "general", content: "General" },
-    { to: "workspace", content: "Workspaces" },
-    { to: "calendars", content: "Calendars" },
+    { to: "general", content: t("settings:general") },
+    { to: "workspace", content: t("settings:workspaces") },
+    { to: "calendars", content: t("settings:calendars") },
   ];
 
   const enablePremium = useRouteLoaderData<typeof layoutLoader>(
@@ -60,7 +65,7 @@ export default function AccountDetailsPage() {
   )?.enablePremium;
 
   if (enablePremium) {
-    items.push({ to: "subscription", content: "Subscription" });
+    items.push({ to: "subscription", content: t("settings:subscription") });
   }
 
   return (

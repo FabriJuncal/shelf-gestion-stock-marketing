@@ -39,6 +39,8 @@ type SelectWithOtherProps = {
   name: string;
   /** Options displayed in the select. */
   options: readonly string[];
+  /** Optional localized labels keyed by the stable submitted option value. */
+  optionLabels?: Readonly<Record<string, string>>;
   /** Error message to display underneath the control. */
   error?: string;
   /** Initial value coming from persisted data. */
@@ -56,6 +58,8 @@ type SelectWithOtherProps = {
   otherInputLabel: string;
   /** Placeholder for the free-form text input. */
   otherInputPlaceholder?: string;
+  /** Visible label for the stable `Other` option value. */
+  otherOptionLabel?: string;
   /**
    * Invoked whenever the resolved value (preset or custom) changes. The value
    * is trimmed and may be an empty string when nothing has been provided.
@@ -99,12 +103,14 @@ function UnhydratedSelectWithOther({
   label,
   name,
   options,
+  optionLabels,
   error,
   defaultValue,
   placeholder = "Select an option",
   required,
   children,
   className,
+  otherOptionLabel = "Other",
   selectRef,
 }: SelectWithOtherProps & {
   selectRef?: RefObject<HTMLSelectElement | null>;
@@ -152,13 +158,13 @@ function UnhydratedSelectWithOther({
         <option value="">{placeholder}</option>
         {options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {optionLabels?.[option] ?? option}
           </option>
         ))}
         {preservedCustomValue ? (
           <option value={preservedCustomValue}>{preservedCustomValue}</option>
         ) : null}
-        <option value={OTHER_FALLBACK_VALUE}>{OTHER_FALLBACK_VALUE}</option>
+        <option value={OTHER_FALLBACK_VALUE}>{otherOptionLabel}</option>
       </select>
       {error ? <p className="text-sm text-error-500">{error}</p> : null}
       {children}
@@ -210,6 +216,7 @@ function EnhancedSelectWithOther({
   label,
   name,
   options,
+  optionLabels,
   error,
   defaultValue,
   placeholder = "Select an option",
@@ -219,6 +226,7 @@ function EnhancedSelectWithOther({
   otherInputPlaceholder,
   onValueChange,
   className,
+  otherOptionLabel = "Other",
 }: SelectWithOtherProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputId = `${name}-other`;
@@ -294,9 +302,9 @@ function EnhancedSelectWithOther({
 
   const selectedLabel = useMemo(() => {
     if (!selection) return placeholder;
-    if (selection === OTHER_OPTION_VALUE) return otherValue || "Other";
-    return selection;
-  }, [selection, otherValue, placeholder]);
+    if (selection === OTHER_OPTION_VALUE) return otherValue || otherOptionLabel;
+    return optionLabels?.[selection] ?? selection;
+  }, [selection, otherValue, optionLabels, otherOptionLabel, placeholder]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -358,7 +366,9 @@ function EnhancedSelectWithOther({
                     handleSelect(option)
                   )}
                 >
-                  <span className="font-medium">{option}</span>
+                  <span className="font-medium">
+                    {optionLabels?.[option] ?? option}
+                  </span>
                   <When truthy={isSelected}>
                     <CheckIcon className="size-4 text-primary" />
                   </When>
@@ -378,7 +388,7 @@ function EnhancedSelectWithOther({
                 handleSelect(OTHER_OPTION_VALUE)
               )}
             >
-              <span className="font-medium">Other</span>
+              <span className="font-medium">{otherOptionLabel}</span>
               <When truthy={selection === OTHER_OPTION_VALUE}>
                 <CheckIcon className="size-4 text-primary" />
               </When>

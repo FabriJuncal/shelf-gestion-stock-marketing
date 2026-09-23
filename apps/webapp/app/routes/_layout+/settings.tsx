@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import { data, Link, Outlet, useLoaderData, useMatches } from "react-router";
 import { ErrorContent } from "~/components/errors";
@@ -5,6 +6,8 @@ import Header from "~/components/layout/header";
 import HorizontalTabs from "~/components/layout/horizontal-tabs";
 import When from "~/components/when/when";
 import { useUserRoleHelper } from "~/hooks/user-user-role-helper";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import type { RouteHandleWithName } from "~/modules/types";
 import { appendToMetaTitle } from "~/utils/append-to-meta-title";
 import { makeShelfError } from "~/utils/error";
@@ -32,8 +35,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
       action: PermissionAction.read,
     });
 
-    const title = "Settings";
-    const subHeading = "Manage your preferences here.";
+    const i18n = createI18n(await resolveRequestLanguage({ request }));
+    const title = i18n.t("settings:title");
+    const subHeading = i18n.t("settings:description");
     const header = {
       title,
       subHeading,
@@ -57,13 +61,18 @@ export const shouldRevalidate = () => false;
 
 export default function SettingsPage() {
   const { _isPersonalOrg } = useLoaderData<typeof loader>();
+  const { t } = useTranslation();
   let items = [
-    { to: "general", content: "General" },
-    ...(!_isPersonalOrg ? [{ to: "bookings", content: "Bookings" }] : []),
-    ...(!_isPersonalOrg ? [{ to: "emails", content: "Emails" }] : []),
-    { to: "custom-fields", content: "Custom fields" },
-    { to: "asset-models", content: "Asset models" },
-    { to: "team", content: "Team" },
+    { to: "general", content: t("settings:general") },
+    ...(!_isPersonalOrg
+      ? [{ to: "bookings", content: t("settings:bookings") }]
+      : []),
+    ...(!_isPersonalOrg
+      ? [{ to: "emails", content: t("settings:emails") }]
+      : []),
+    { to: "custom-fields", content: t("settings:customFields") },
+    { to: "asset-models", content: t("settings:assetModels") },
+    { to: "team", content: t("settings:team") },
   ];
 
   const { isBaseOrSelfService } = useUserRoleHelper();

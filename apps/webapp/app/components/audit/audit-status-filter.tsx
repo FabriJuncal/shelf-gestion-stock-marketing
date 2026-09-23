@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useNavigation } from "react-router";
 import { useSearchParams } from "~/hooks/search-params";
 import { isFormProcessing } from "~/utils/form";
@@ -37,6 +38,7 @@ type AuditStatusFilterProps = {
  * Default filter is ALL (shows all assets).
  */
 export function AuditStatusFilter(props: AuditStatusFilterProps) {
+  const { t } = useTranslation();
   const { statusOptions, name = "auditStatus" } = props;
   const navigation = useNavigation();
   const disabled = isFormProcessing(navigation.state);
@@ -67,10 +69,10 @@ export function AuditStatusFilter(props: AuditStatusFilterProps) {
         disabled={disabled}
       >
         <SelectTrigger
-          aria-label="Filter by audit status"
+          aria-label={t("audit:filterByStatus")}
           className="mt-2 px-3.5 py-2 text-left text-base text-gray-500 md:mt-0 md:max-w-fit"
         >
-          <SelectValue placeholder="Filter by status" />
+          <SelectValue placeholder={t("audit:filterByStatus")} />
         </SelectTrigger>
         <SelectContent
           position="popper"
@@ -78,24 +80,27 @@ export function AuditStatusFilter(props: AuditStatusFilterProps) {
           align="start"
         >
           <div className="max-h-[320px] overflow-auto">
-            {[["ALL", "All"] as const, ...Object.entries(statusOptions)].map(
-              ([value, itemLabel]) => (
-                <SelectItem
-                  value={value}
-                  key={value}
-                  className="rounded-none border-b border-gray-200 px-6 py-4 pr-[5px]"
-                >
-                  {/* why: no `lowercase first-letter:uppercase` here. That
+            {[
+              ["ALL", t("audit:all")] as const,
+              ...Object.entries(statusOptions),
+            ].map(([value, itemLabel]) => (
+              <SelectItem
+                value={value}
+                key={value}
+                className="rounded-none border-b border-gray-200 px-6 py-4 pr-[5px]"
+              >
+                {/* why: no `lowercase first-letter:uppercase` here. That
                       transform existed to sentence-case a RAW ENUM; the prop
                       now carries final display text, and lowercasing it would
                       mangle any label with a deliberate internal capital
                       ("QR code", a proper noun). */}
-                  <span className="mr-4 block text-[14px] text-gray-700">
-                    {itemLabel}
-                  </span>
-                </SelectItem>
-              )
-            )}
+                <span className="mr-4 block text-[14px] text-gray-700">
+                  {value === "ALL"
+                    ? itemLabel
+                    : t(`audit:status.${value}`, { defaultValue: itemLabel })}
+                </span>
+              </SelectItem>
+            ))}
           </div>
         </SelectContent>
       </Select>

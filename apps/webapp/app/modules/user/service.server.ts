@@ -275,6 +275,7 @@ export async function createUserOrAttachOrg({
   lastName,
   createdWithInvite = false,
   formatPrefs,
+  language,
 }: Pick<User, "email" | "firstName"> &
   Partial<Pick<User, "lastName">> & {
     organizationId: Organization["id"];
@@ -283,6 +284,8 @@ export async function createUserOrAttachOrg({
     createdWithInvite: boolean;
     /** Browser-detected prefs threaded down from the invite-accept action. */
     formatPrefs?: DetectedFormatPrefs;
+    /** Language selected in the browser before accepting the invite. */
+    language?: User["language"];
   }) {
   try {
     const shelfUser = await db.user.findFirst({
@@ -296,14 +299,18 @@ export async function createUserOrAttachOrg({
     // confirming the existing auth account. The invite JWT (sent to the
     // user's email) serves as proof of email ownership.
     if (!shelfUser?.id) {
-      let authAccount = await createEmailAuthAccount(email, password).catch(
-        () => null
-      );
+      let authAccount = await createEmailAuthAccount(
+        email,
+        password,
+        language ?? undefined
+      ).catch(() => null);
 
       if (!authAccount) {
-        authAccount = await confirmExistingAuthAccount(email, password).catch(
-          () => null
-        );
+        authAccount = await confirmExistingAuthAccount(
+          email,
+          password,
+          language ?? undefined
+        ).catch(() => null);
       }
 
       if (!authAccount) {
@@ -326,6 +333,7 @@ export async function createUserOrAttachOrg({
         lastName,
         createdWithInvite,
         formatPrefs,
+        language,
       });
 
       await ensureAssetIndexModeForRole({
@@ -399,7 +407,9 @@ export async function createUserFromSSO(
     };
   },
   /** Browser-detected prefs from the SSO callback action; stamped on the new row. */
-  formatPrefs?: DetectedFormatPrefs
+  formatPrefs?: DetectedFormatPrefs,
+  /** Interface language resolved before the SSO redirect. */
+  language?: User["language"]
 ) {
   try {
     const { email, userId } = authSession;
@@ -415,6 +425,7 @@ export async function createUserFromSSO(
       username: randomUsernameFromEmail(email),
       isSSO: true,
       formatPrefs,
+      language,
     });
 
     // Update contact information if provided
@@ -821,6 +832,8 @@ export async function createUser(
     createdWithInvite?: boolean;
     /** Browser-detected prefs to stamp on the new row; undefined → resolved at read time. */
     formatPrefs?: DetectedFormatPrefs;
+    /** Language captured by Supabase Auth during signup, when available. */
+    language?: User["language"];
     skipPersonalOrg?: boolean;
   }
 ) {
@@ -835,6 +848,7 @@ export async function createUser(
     isSSO,
     createdWithInvite,
     formatPrefs,
+    language,
     skipPersonalOrg,
   } = payload;
 
@@ -858,6 +872,7 @@ export async function createUser(
             // Stamp browser-detected date/time/week/timezone prefs when supplied.
             // `{...undefined}` is a no-op, so unset prefs leave the columns null.
             ...formatPrefs,
+            language,
             roles: {
               connect: {
                 name: Roles["USER"],
@@ -1050,24 +1065,35 @@ export async function updateUser<T extends Prisma.UserInclude>(
   const cleanClone = (({ password, confirmPassword, email, ...o }) => o)(
     updateUserPayload
   );
+  const shouldSyncTeamMemberName = [
+    "displayName",
+    "firstName",
+    "lastName",
+  ].some((field) =>
+    Object.prototype.hasOwnProperty.call(updateUserPayload, field)
+  );
 
   try {
     const updatedUser = await db.user.update({
       where: { id: updateUserPayload.id },
       data: {
         ...cleanClone,
-        teamMembers: {
-          updateMany: {
-            where: { userId: updateUserPayload.id },
-            data: {
-              name:
-                updateUserPayload.displayName ||
-                `${updateUserPayload.firstName || ""} ${
-                  updateUserPayload.lastName || ""
-                }`.trim(),
-            },
-          },
-        },
+        ...(shouldSyncTeamMemberName
+          ? {
+              teamMembers: {
+                updateMany: {
+                  where: { userId: updateUserPayload.id },
+                  data: {
+                    name:
+                      updateUserPayload.displayName ||
+                      `${updateUserPayload.firstName || ""} ${
+                        updateUserPayload.lastName || ""
+                      }`.trim(),
+                  },
+                },
+              },
+            }
+          : {}),
       },
       include: {
         ...extraIncludes,

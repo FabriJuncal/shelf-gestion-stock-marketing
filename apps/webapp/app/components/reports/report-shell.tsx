@@ -14,6 +14,7 @@
 
 import type { ReactNode } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { useSearchParams } from "~/hooks/search-params";
@@ -86,6 +87,7 @@ export function ReportShell({
   loading = false,
   className,
 }: ReportShellProps) {
+  const { t } = useTranslation();
   return (
     <div className={tw("flex flex-col", className)}>
       {/* Header - matches app header pattern */}
@@ -101,7 +103,7 @@ export function ReportShell({
             )}
           >
             <ArrowLeft className="size-4" />
-            <span>Reports</span>
+            <span>{t("audit:reports")}</span>
           </Link>
 
           {/* Export action - always visible, disabled when no data */}
@@ -116,10 +118,12 @@ export function ReportShell({
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
               "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
             )}
-            title={!exportable ? "No data to export" : undefined}
+            title={!exportable ? t("audit:noDataToExport") : undefined}
           >
             <Download className="size-4" />
-            <span>{exporting ? "Exporting..." : "Export CSV"}</span>
+            <span>
+              {exporting ? t("audit:exporting") : t("audit:exportCsv")}
+            </span>
           </button>
         </div>
 
@@ -194,6 +198,7 @@ export function ReportFooter({
   /** Hide row count for visualization-only reports (e.g., distribution) */
   hideRowCount?: boolean;
 }) {
+  const { t } = useTranslation();
   const start = totalRows > 0 ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(page * pageSize, totalRows);
   const totalPages = Math.ceil(totalRows / pageSize);
@@ -206,8 +211,12 @@ export function ReportFooter({
       ) : (
         <span>
           {totalRows === 0
-            ? "No results for selected timeframe"
-            : `Showing ${start}–${end} of ${totalRows.toLocaleString()} results`}
+            ? t("audit:noResultsForTimeframe")
+            : t("audit:showingResults", {
+                start,
+                end,
+                total: totalRows.toLocaleString(),
+              })}
         </span>
       )}
 
@@ -215,7 +224,7 @@ export function ReportFooter({
         {showPagination && (
           <ReportPaginationInline page={page} totalPages={totalPages} />
         )}
-        <span>Computed in {computedMs}ms</span>
+        <span>{t("audit:computedIn", { milliseconds: computedMs })}</span>
       </div>
     </div>
   );

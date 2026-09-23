@@ -13,6 +13,7 @@
  * @see {@link file://./language-region-form.tsx}
  */
 import type { WeekStartPreference } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import { EnumPreferenceSelect } from "./enum-preference-select";
 
 /** One selectable week-start option. */
@@ -62,11 +63,17 @@ type WeekStartSelectProps = {
  * @returns The week-start selector control
  */
 export function WeekStartSelect(props: WeekStartSelectProps) {
+  const { t } = useTranslation();
+  const options = OPTIONS.map((option) => ({
+    ...option,
+    label: t(`format:${option.value}.label`),
+    description: t(`format:${option.value}.description`),
+  }));
   return (
     <EnumPreferenceSelect
       {...props}
-      options={OPTIONS}
-      ariaLabel="Week start options"
+      options={options}
+      ariaLabel={t("format:weekStartOptions")}
     />
   );
 }

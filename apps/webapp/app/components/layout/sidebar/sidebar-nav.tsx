@@ -1,5 +1,6 @@
 import { Fragment, useCallback } from "react";
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import FeedbackNavItem from "~/components/feedback/feedback-nav-item";
 import type { NavItem } from "~/hooks/use-sidebar-nav-items";
 import ChildNavItem from "./child-nav-item";
@@ -24,9 +25,11 @@ type SidebarNavProps = {
  * Computes the tooltip value (string or tooltip config object) for a nav item
  * based on its disabled state.
  */
-function getNavItemTooltip(navItem: NavItem) {
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+function getNavItemTooltip(navItem: NavItem, t: Translate) {
   if (typeof navItem.disabled === "boolean" && navItem.disabled) {
-    return `${navItem.title} is disabled`;
+    return t("navigation:disabledTooltip", { item: navItem.title });
   }
 
   if (typeof navItem.disabled === "object") {
@@ -45,16 +48,18 @@ function getNavItemTooltip(navItem: NavItem) {
 function NavItemRenderer({
   navItem,
   closeIfMobile,
+  t,
 }: {
   navItem: NavItem;
   closeIfMobile: () => void;
+  t: Translate;
 }) {
   switch (navItem.type) {
     case "parent": {
       return (
         <ParentNavItem
           route={navItem}
-          tooltip={getNavItemTooltip(navItem)}
+          tooltip={getNavItemTooltip(navItem, t)}
           closeIfMobile={closeIfMobile}
         />
       );
@@ -65,7 +70,7 @@ function NavItemRenderer({
         <ChildNavItem
           route={navItem}
           closeIfMobile={closeIfMobile}
-          tooltip={getNavItemTooltip(navItem)}
+          tooltip={getNavItemTooltip(navItem, t)}
         />
       );
     }
@@ -74,11 +79,7 @@ function NavItemRenderer({
       return (
         <SidebarMenuItem>
           <SidebarGroupLabel
-            className={
-              navItem.title.toLowerCase() === "organization"
-                ? "mt-4"
-                : undefined
-            }
+            className={navItem.id === "organization" ? "mt-4" : undefined}
           >
             {navItem.title}
           </SidebarGroupLabel>
@@ -88,12 +89,12 @@ function NavItemRenderer({
 
     case "button": {
       // Special handling for Updates button
-      if (navItem.title === "Updates") {
+      if (navItem.id === "updates") {
         return <UpdatesNavItem />;
       }
 
       // Special handling for Feedback button
-      if (navItem.title === "Questions/Feedback") {
+      if (navItem.id === "feedback") {
         return <FeedbackNavItem />;
       }
 
@@ -118,6 +119,7 @@ export default function SidebarNav({
   style,
   items,
 }: SidebarNavProps) {
+  const { t } = useTranslation();
   const { isMobile, toggleSidebar } = useSidebar();
 
   const closeIfMobile = useCallback(() => {
@@ -132,8 +134,12 @@ export default function SidebarNav({
         {items.map((navItem) => (
           // Use title as a stable key. Titles are unique within a sidebar
           // section (the list is authored in use-sidebar-nav-items.tsx).
-          <Fragment key={`${navItem.type}-${navItem.title}`}>
-            <NavItemRenderer navItem={navItem} closeIfMobile={closeIfMobile} />
+          <Fragment key={`${navItem.type}-${navItem.id}`}>
+            <NavItemRenderer
+              navItem={navItem}
+              closeIfMobile={closeIfMobile}
+              t={t}
+            />
           </Fragment>
         ))}
       </SidebarMenu>

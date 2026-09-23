@@ -6,22 +6,30 @@ import {
 import type { AuthSession } from "@server/session";
 import { config } from "~/config/shelf.config";
 import { db } from "~/database/db.server";
+import type { AppLanguage } from "~/i18n/types";
 import { getSupabaseAdmin } from "~/integrations/supabase/client";
 import { SERVER_URL } from "~/utils/env";
 
 import type { ErrorLabel } from "~/utils/error";
 import { isLikeShelfError, ShelfError } from "~/utils/error";
 import { Logger } from "~/utils/logger";
+import type { AuthErrorCode } from "./localize-error.server";
+import { AUTH_ERROR_CODES, authErrorData } from "./localize-error.server";
 import { mapAuthSession } from "./mappers.server";
 
 const label: ErrorLabel = "Auth";
 
-export async function createEmailAuthAccount(email: string, password: string) {
+export async function createEmailAuthAccount(
+  email: string,
+  password: string,
+  language?: AppLanguage
+) {
   try {
     const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
       email,
       password,
       email_confirm: true,
+      ...(language ? { user_metadata: { language } } : {}),
     });
 
     if (error) {
@@ -54,7 +62,8 @@ export async function createEmailAuthAccount(email: string, password: string) {
  */
 export async function confirmExistingAuthAccount(
   email: string,
-  password: string
+  password: string,
+  language?: AppLanguage
 ) {
   try {
     const result = await db.$queryRaw<{ id: string }[]>`
@@ -72,6 +81,7 @@ export async function confirmExistingAuthAccount(
       {
         email_confirm: true,
         password,
+        ...(language ? { user_metadata: { language } } : {}),
       }
     );
 
@@ -90,7 +100,11 @@ export async function confirmExistingAuthAccount(
   }
 }
 
-export async function signUpWithEmailPass(email: string, password: string) {
+export async function signUpWithEmailPass(
+  email: string,
+  password: string,
+  language: AppLanguage
+) {
   try {
     const { data, error } = await getSupabaseAdmin().auth.signUp({
       email: email,
@@ -98,6 +112,7 @@ export async function signUpWithEmailPass(email: string, password: string) {
       options: {
         data: {
           signup_method: "email-password",
+          language,
         },
       },
     });
@@ -133,7 +148,12 @@ export async function signUpWithEmailPass(email: string, password: string) {
     throw new ShelfError({
       cause,
       message,
-      additionalData: { email },
+      additionalData: authErrorData(
+        isRateLimitError
+          ? AUTH_ERROR_CODES.rateLimited
+          : AUTH_ERROR_CODES.signupFailed,
+        { email }
+      ),
       label,
       shouldBeCaptured: !(
         isRateLimitError ||
@@ -205,6 +225,12 @@ export async function signInWithEmail(email: string, password: string) {
       cause,
       message,
       label,
+      additionalData: authErrorData(
+        isInvalidCredentials
+          ? AUTH_ERROR_CODES.invalidCredentials
+          : AUTH_ERROR_CODES.generic,
+        { email }
+      ),
       shouldBeCaptured: !(
         isInvalidCredentials ||
         isTransientFetchError ||
@@ -247,11 +273,13 @@ export async function signInWithSSO(
     let message =
       "Something went wrong. Please try again later or contact support.";
     let shouldBeCaptured = true;
+    let authErrorCode: AuthErrorCode = AUTH_ERROR_CODES.generic;
 
     // @ts-expect-error
     if (cause?.code === "sso_provider_not_found") {
       message = "No SSO provider assigned for your organization's domain";
       shouldBeCaptured = false;
+      authErrorCode = AUTH_ERROR_CODES.ssoProviderNotFound;
     }
 
     throw new ShelfError({
@@ -259,7 +287,7 @@ export async function signInWithSSO(
       message,
       label,
       shouldBeCaptured,
-      additionalData: { domain },
+      additionalData: authErrorData(authErrorCode, { domain }),
     });
   }
 }
@@ -281,14 +309,14 @@ async function validateNonSSOUser(email: string) {
       title: "SSO User",
       message:
         "This email address is associated with an SSO account. Please use SSO login instead.",
-      additionalData: { email },
+      additionalData: authErrorData(AUTH_ERROR_CODES.ssoRequired, { email }),
       label: "Auth",
       shouldBeCaptured: false,
     });
   }
 }
 
-export async function sendOTP(email: string) {
+export async function sendOTP(email: string, language: AppLanguage) {
   try {
     await validateNonSSOUser(email);
 
@@ -296,6 +324,10 @@ export async function sendOTP(email: string) {
       email,
       options: {
         shouldCreateUser: !config.disableSignup, // If signup is disabled, don't create a new user
+        data: {
+          signup_method: "otp",
+          language,
+        },
       },
     });
 
@@ -341,7 +373,15 @@ export async function sendOTP(email: string) {
     throw new ShelfError({
       cause,
       message: hasUsableMessage ? cause.message : fallbackMessage,
-      additionalData: { email },
+      additionalData: authErrorData(
+        isRateLimitError
+          ? AUTH_ERROR_CODES.rateLimited
+          : isLikeShelfError(cause) &&
+            cause.additionalData?.authErrorCode === AUTH_ERROR_CODES.ssoRequired
+          ? AUTH_ERROR_CODES.ssoRequired
+          : AUTH_ERROR_CODES.otpSendFailed,
+        { email }
+      ),
       label,
       shouldBeCaptured:
         inheritedShouldBeCaptured === false
@@ -665,6 +705,11 @@ export async function verifyOtpAndSignin(email: string, otp: string) {
     let message =
       "Something went wrong. Please try again later or contact support.";
     let shouldBeCaptured = true;
+    const isInvalidOtp =
+      isAuthApiError(cause) &&
+      (cause.code === "otp_expired" ||
+        cause.message.toLowerCase().includes("token has expired") ||
+        cause.message.toLowerCase().includes("token is invalid"));
 
     if (isAuthApiError(cause) && cause.message !== "") {
       message = cause.message;
@@ -676,7 +721,10 @@ export async function verifyOtpAndSignin(email: string, otp: string) {
       message,
       label,
       shouldBeCaptured,
-      additionalData: { email },
+      additionalData: authErrorData(
+        isInvalidOtp ? AUTH_ERROR_CODES.invalidOtp : AUTH_ERROR_CODES.generic,
+        { email }
+      ),
     });
   }
 }

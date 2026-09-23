@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { Barcode, Kit } from "@prisma/client";
 import { useAtom, useAtomValue } from "jotai";
+import { useTranslation } from "react-i18next";
 import { useActionData, useLocation } from "react-router";
 import { useZorm } from "react-zorm";
 import { z } from "zod";
@@ -66,6 +67,7 @@ export default function KitsForm({
   locationId,
   referer,
 }: KitFormProps) {
+  const { t } = useTranslation();
   const disabled = useDisabled();
   const { canUseBarcodes } = useBarcodePermissions();
   const barcodesInputRef = useRef<BarcodesInputRef>(null);
@@ -146,10 +148,14 @@ export default function KitsForm({
           referer={referer}
         />
 
-        <FormRow rowLabel="Name" className="border-b-0 pb-[10px]" required>
+        <FormRow
+          rowLabel={t("inventory:name")}
+          className="border-b-0 pb-[10px]"
+          required
+        >
           <Input
             ref={nameInputRef}
-            label="Name"
+            label={t("inventory:name")}
             hideLabel
             name={zo.fields.name()}
             disabled={disabled}
@@ -162,24 +168,19 @@ export default function KitsForm({
         </FormRow>
 
         <FormRow
-          rowLabel="Description"
-          subHeading={
-            <p>
-              Briefly describe what is included and/or what is will be used for.
-              It will be shown on the kit’s overview page.
-            </p>
-          }
+          rowLabel={t("inventory:description")}
+          subHeading={<p>{t("inventory:kitDescriptionHelp")}</p>}
           className="border-b-0"
           required={zodFieldIsRequired(NewKitFormSchema.shape.description)}
         >
           <Input
             inputType="textarea"
             maxLength={1000}
-            label={"Description"}
+            label={t("inventory:description")}
             name={zo.fields.description()}
             defaultValue={description || ""}
             hideLabel
-            placeholder="Write your description here..."
+            placeholder={t("inventory:kitDescriptionPlaceholder")}
             disabled={disabled}
             className="w-full"
             required={zodFieldIsRequired(NewKitFormSchema.shape.description)}
@@ -187,18 +188,17 @@ export default function KitsForm({
         </FormRow>
 
         <FormRow
-          rowLabel="Category"
+          rowLabel={t("inventory:category")}
           subHeading={
             <p>
-              Make it unique. Each kit can have 1 category. It will show on your
-              index.{" "}
+              {t("inventory:categoryHelp")}{" "}
               <Button
                 to="/categories/new"
                 variant="link-gray"
                 className="text-gray-600 underline"
                 target="_blank"
               >
-                Create categories
+                {t("inventory:createCategories")}
               </Button>
             </p>
           }
@@ -210,8 +210,8 @@ export default function KitsForm({
             defaultValue={categoryId ?? undefined}
             model={{ name: "category", queryKey: "name" }}
             triggerWrapperClassName="flex flex-col !gap-0 justify-start items-start [&_.inner-label]:w-full [&_.inner-label]:text-left "
-            contentLabel="Categories"
-            label="Category"
+            contentLabel={t("inventory:categories")}
+            label={t("inventory:category")}
             hideLabel
             initialDataKey="categories"
             countKey="totalCategories"
@@ -221,8 +221,8 @@ export default function KitsForm({
             extraContent={({ onItemCreated, closePopover }) => (
               <InlineEntityCreationDialog
                 type="category"
-                title="Create new category"
-                buttonLabel="Create new category"
+                title={t("inventory:createNewCategory")}
+                buttonLabel={t("inventory:createNewCategory")}
                 onCreated={(created) => {
                   if (created?.type !== "category") return;
                   const category = created.entity;
@@ -240,18 +240,17 @@ export default function KitsForm({
         </FormRow>
 
         <FormRow
-          rowLabel="Location"
+          rowLabel={t("inventory:location")}
           subHeading={
             <p>
-              A location is a place where an item is supposed to be located.
-              This is different than the last scanned location{" "}
+              {t("inventory:locationHelp")}{" "}
               <Button
                 to="/locations/new"
                 className="text-gray-600 underline"
                 target="_blank"
                 variant="link-gray"
               >
-                Create locations
+                {t("inventory:createLocations")}
               </Button>
             </p>
           }
@@ -264,8 +263,8 @@ export default function KitsForm({
             triggerWrapperClassName="flex flex-col !gap-0 justify-start items-start [&_.inner-label]:w-full [&_.inner-label]:text-left "
             defaultValue={locationId ?? undefined}
             model={{ name: "location", queryKey: "name" }}
-            contentLabel="Locations"
-            label="Location"
+            contentLabel={t("inventory:locations")}
+            label={t("inventory:location")}
             hideLabel
             initialDataKey="locations"
             countKey="totalLocations"
@@ -274,8 +273,8 @@ export default function KitsForm({
             extraContent={({ onItemCreated, closePopover }) => (
               <InlineEntityCreationDialog
                 type="location"
-                title="Create new location"
-                buttonLabel="Create new location"
+                title={t("inventory:createNewLocation")}
+                buttonLabel={t("inventory:createNewLocation")}
                 onCreated={(created) => {
                   if (created?.type !== "location") return;
                   const location = created.entity;
@@ -303,10 +302,13 @@ export default function KitsForm({
           />
         </FormRow>
 
-        <FormRow rowLabel="Image" className="border-b-0 pt-[10px]">
+        <FormRow
+          rowLabel={t("inventory:image")}
+          className="border-b-0 pt-[10px]"
+        >
           <div>
             <p className="hidden lg:block">
-              Accepts PNG, JPG, JPEG, or WebP (max.8 MB)
+              {t("inventory:assetImageUploadHelp")}
             </p>
             <Input
               disabled={disabled}
@@ -314,23 +316,23 @@ export default function KitsForm({
               name="image"
               type="file"
               onChange={validateFile}
-              label="Image"
+              label={t("inventory:image")}
               hideLabel
               error={imageError}
               className="mt-2"
               inputClassName="border-0 shadow-none p-0 rounded-none"
             />
             <p className="mt-2 lg:hidden">
-              Accepts PNG, JPG, JPEG, or WebP (max.8 MB)
+              {t("inventory:assetImageUploadHelp")}
             </p>
           </div>
         </FormRow>
 
         <When truthy={canUseBarcodes}>
           <FormRow
-            rowLabel={"Barcodes"}
+            rowLabel={t("inventory:barcodes")}
             className="border-b-0"
-            subHeading="Add additional barcodes to this kit (Code 128, Code 39, or Data Matrix). Note: Each kit automatically gets a default Shelf QR code for tracking."
+            subHeading={t("inventory:kitBarcodesHelp")}
           >
             <BarcodesInput
               ref={barcodesInputRef}
@@ -346,10 +348,10 @@ export default function KitsForm({
         <FormRow className="border-y-0 pb-0 pt-5" rowLabel="">
           <div className="ml-auto flex gap-2">
             <Button to={cancelTo} variant="secondary" disabled={disabled}>
-              Cancel
+              {t("common:cancel")}
             </Button>
             <Button type="submit" disabled={disabled}>
-              {disabled ? "Saving..." : "Save"}
+              {disabled ? t("inventory:saving") : t("common:save")}
             </Button>
           </div>
         </FormRow>

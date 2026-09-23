@@ -18,6 +18,8 @@ import { Table, Td, Th } from "~/components/table";
 import { WorkspaceActionsDropdown } from "~/components/workspace/workspace-actions-dropdown";
 import { db } from "~/database/db.server";
 import { useUserData } from "~/hooks/use-user-data";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { getSelectedOrganization } from "~/modules/organization/context.server";
 import { getUserTierLimit } from "~/modules/tier/service.server";
 import { appendToMetaTitle } from "~/utils/append-to-meta-title";
@@ -113,7 +115,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
       items: organizations,
       totalItems: organizations.length,
       modelName,
-      title: "Workspace",
+      title: createI18n(await resolveRequestLanguage({ request })).t(
+        "settings:workspaces"
+      ),
     });
   } catch (cause) {
     const reason = makeShelfError(cause, { userId });

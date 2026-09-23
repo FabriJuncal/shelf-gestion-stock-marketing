@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Prisma } from "@prisma/client";
 import { ChevronDownIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -30,6 +31,9 @@ import When from "~/components/when/when";
 import { config } from "~/config/shelf.config";
 import { sendEmail } from "~/emails/mail.server";
 import { onboardingEmailText } from "~/emails/onboarding-email";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
+import { localizeAuthError } from "~/modules/auth/localize-error.server";
 import {
   getAuthUserById,
   signInWithEmail,
@@ -89,11 +93,13 @@ function createOnboardingSchema({
   collectBusinessIntel,
   requireCompanyName,
   createdWithInvite,
+  t,
 }: {
   userSignedUpWithPassword: boolean;
   collectBusinessIntel: boolean;
   requireCompanyName: boolean;
   createdWithInvite: boolean;
+  t: (key: string) => string;
 }) {
   /**
    * Invited users only need name, username, and password.
@@ -103,25 +109,23 @@ function createOnboardingSchema({
   const shouldCollectBusinessIntel = collectBusinessIntel && !createdWithInvite;
   return z
     .object({
-      username: z
-        .string()
-        .min(4, { message: "Must be at least 4 characters long" }),
-      firstName: z.string().min(1, { message: "First name is required" }),
-      lastName: z.string().min(1, { message: "Last name is required" }),
+      username: z.string().min(4, { message: t("auth:usernameTooShort") }),
+      firstName: z.string().min(1, { message: t("auth:firstNameRequired") }),
+      lastName: z.string().min(1, { message: t("auth:lastNameRequired") }),
       // When the user already has a password (e.g. signed up via email/pass),
       // the field is optional and unconstrained — they are not setting one here.
       // Only the setter branch enforces the 8–72 char bounds.
       password: userSignedUpWithPassword
         ? z.string().optional()
-        : passwordSchema("Password is too short. Minimum 8 characters."),
+        : passwordSchema(t("auth:passwordTooShort")),
       confirmPassword: userSignedUpWithPassword
         ? z.string().optional()
-        : passwordSchema("Password is too short. Minimum 8 characters."),
+        : passwordSchema(t("auth:passwordTooShort")),
       referralSource: shouldCollectBusinessIntel
-        ? z.string().min(5, "Field is required.")
+        ? z.string().min(5, t("auth:fieldRequired"))
         : z.string().optional().nullable(),
       jobTitle: shouldCollectBusinessIntel
-        ? requiredTrimmedField("Role is required")
+        ? requiredTrimmedField(t("auth:roleRequired"))
         : optionalTrimmedField,
       teamSize: optionalTrimmedField,
       companyName: optionalTrimmedField,
@@ -146,7 +150,7 @@ function createOnboardingSchema({
         if (password !== confirmPassword) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Password and confirm password must match",
+            message: t("auth:passwordsMustMatch"),
             path: ["confirmPassword"],
           });
         }
@@ -161,7 +165,7 @@ function createOnboardingSchema({
           ) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: "Team size is required",
+              message: t("auth:teamSizeRequired"),
               path: ["teamSize"],
             });
           }
@@ -172,7 +176,7 @@ function createOnboardingSchema({
           ) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: "Company or organization is required",
+              message: t("auth:companyRequired"),
               path: ["companyName"],
             });
           }
@@ -217,6 +221,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     const user = await getUserByID(userId, {
       select: {
         id: true,
+        language: true,
         onboarded: true,
         username: true,
         createdWithInvite: true,
@@ -240,6 +245,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
         },
       } satisfies Prisma.UserSelect,
     });
+    const i18n = createI18n(
+      await resolveRequestLanguage({ request, userLanguage: user.language })
+    );
 
     /** If the user is already onboarded, we assume they finished the process so we send them to the index */
     if (user.onboarded) {
@@ -281,11 +289,11 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
       collectBusinessIntel: config.collectBusinessIntel,
       requireCompanyName,
       createdWithInvite,
+      t: (key) => i18n.t(key),
     });
 
-    const title = "Set up your account";
-    const subHeading =
-      "You are almost ready to use Shelf. We just need some basic information to get you started.";
+    const title = i18n.t("auth:setUpAccount");
+    const subHeading = i18n.t("auth:onboardingHelp");
 
     return payload({
       title,
@@ -312,6 +320,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 export async function action({ context, request }: ActionFunctionArgs) {
   const authSession = context.getSession();
   const { userId } = authSession;
+  let i18n = createI18n(await resolveRequestLanguage({ request }));
 
   try {
     assertIsPost(request);
@@ -321,12 +330,19 @@ export async function action({ context, request }: ActionFunctionArgs) {
     const existingUser = await getUserByID(userId, {
       select: {
         id: true,
+        language: true,
         createdWithInvite: true,
         userOrganizations: {
           select: { organizationId: true },
         },
       } satisfies Prisma.UserSelect,
     });
+    i18n = createI18n(
+      await resolveRequestLanguage({
+        request,
+        userLanguage: existingUser.language,
+      })
+    );
 
     const metadata = parseData(
       formData,
@@ -377,6 +393,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
       collectBusinessIntel: config.collectBusinessIntel,
       requireCompanyName: !createdWithInvite,
       createdWithInvite: existingUser.createdWithInvite,
+      t: (key) => i18n.t(key),
     });
 
     const payload = parseData(formData, OnboardingFormSchema, {
@@ -493,11 +510,13 @@ export async function action({ context, request }: ActionFunctionArgs) {
       { userId },
       !isZodValidationError(cause)
     );
-    return data(error(reason), { status: reason.status });
+    const localizedReason = localizeAuthError(reason, (key) => i18n.t(key));
+    return data(error(localizedReason), { status: localizedReason.status });
   }
 }
 
 export default function Onboarding() {
+  const { t } = useTranslation();
   const {
     user,
     userSignedUpWithPassword,
@@ -515,7 +534,39 @@ export default function Onboarding() {
     collectBusinessIntel,
     requireCompanyName,
     createdWithInvite,
+    t: (key) => t(key),
   });
+
+  const optionLabels = useMemo(
+    () => ({
+      "Operations Manager": t("auth:roleOperationsManager"),
+      "IT Administrator": t("auth:roleItAdministrator"),
+      "Facilities Manager": t("auth:roleFacilitiesManager"),
+      "Equipment Manager": t("auth:roleEquipmentManager"),
+      "Office Manager": t("auth:roleOfficeManager"),
+      "Business Owner": t("auth:roleBusinessOwner"),
+      "Project Manager": t("auth:roleProjectManager"),
+      "Personal use": t("auth:rolePersonalUse"),
+      "Just me (1)": t("auth:teamJustMe"),
+      "Small team (2-10)": t("auth:teamSmall"),
+      "Department (11-50)": t("auth:teamDepartment"),
+      "Large organization (50+)": t("auth:teamLarge"),
+      "IT hardware": t("auth:trackItHardware"),
+      "Office equipment": t("auth:trackOfficeEquipment"),
+      "Facilities assets": t("auth:trackFacilitiesAssets"),
+      "Tools & machinery": t("auth:trackToolsMachinery"),
+      "Inventory & supplies": t("auth:trackInventorySupplies"),
+      Spreadsheets: t("auth:solutionSpreadsheets"),
+      "Paper logs": t("auth:solutionPaperLogs"),
+      "Dedicated asset tool": t("auth:solutionDedicatedTool"),
+      "Not tracking yet": t("auth:solutionNotTracking"),
+      "This week": t("auth:timelineWeek"),
+      "Within a month": t("auth:timelineMonth"),
+      "Next quarter": t("auth:timelineQuarter"),
+      "Just exploring": t("auth:timelineExploring"),
+    }),
+    [t]
+  );
 
   const zo = useZorm("NewQuestionWizardScreen", OnboardingFormSchema);
   const actionData = useActionData<typeof action>();
@@ -560,7 +611,7 @@ export default function Onboarding() {
 
         <div className="md:flex md:gap-6">
           <Input
-            label="First name"
+            label={t("auth:firstName")}
             autoComplete="given-name"
             required
             data-test-id="firstName"
@@ -571,7 +622,7 @@ export default function Onboarding() {
             className="mb-5 md:mb-0 md:flex-1"
           />
           <Input
-            label="Last name"
+            label={t("auth:lastName")}
             autoComplete="family-name"
             required
             data-test-id="lastName"
@@ -584,7 +635,7 @@ export default function Onboarding() {
         </div>
         <div>
           <Input
-            label="Username"
+            label={t("auth:username")}
             addOn="shelf.nu/"
             autoComplete="username"
             required
@@ -604,7 +655,7 @@ export default function Onboarding() {
           <>
             <PasswordInput
               required
-              label="Password"
+              label={t("auth:password")}
               placeholder="********"
               data-test-id="password"
               name={zo.fields.password()}
@@ -620,7 +671,7 @@ export default function Onboarding() {
 
             <PasswordInput
               required
-              label="Confirm password"
+              label={t("auth:confirmPassword")}
               data-test-id="confirmPassword"
               placeholder="********"
               name={zo.fields.confirmPassword()}
@@ -640,22 +691,24 @@ export default function Onboarding() {
           <>
             <Input
               required
-              label="How did you hear about us?"
-              placeholder="Twitter, Reddit, ChatGPT, Google, etc..."
+              label={t("auth:referralSource")}
+              placeholder={t("auth:referralPlaceholder")}
               name={zo.fields.referralSource()}
               defaultValue={referralSourceDefault}
               error={zo.errors.referralSource()?.message}
             />
 
             <SelectWithOther
-              label="What's your role?"
+              label={t("auth:roleQuestion")}
               name={zo.fields.jobTitle()}
               options={ROLE_OPTIONS}
+              optionLabels={optionLabels}
+              otherOptionLabel={t("auth:other")}
               required
               error={zo.errors.jobTitle()?.message}
               defaultValue={jobTitleDefault}
-              otherInputLabel="Specify your role"
-              otherInputPlaceholder="Tell us about your role"
+              otherInputLabel={t("auth:specifyRole")}
+              otherInputPlaceholder={t("auth:rolePlaceholder")}
               onValueChange={(value) => {
                 setIsPersonalUse(value === "Personal use");
               }}
@@ -663,20 +716,22 @@ export default function Onboarding() {
 
             <When truthy={!isPersonalUse && requireCompanyName}>
               <SelectWithOther
-                label="How many people will use this?"
+                label={t("auth:teamSizeQuestion")}
                 name={zo.fields.teamSize()}
                 options={TEAM_SIZE_OPTIONS}
+                optionLabels={optionLabels}
+                otherOptionLabel={t("auth:other")}
                 required
                 error={zo.errors.teamSize()?.message}
                 defaultValue={teamSizeDefault}
-                otherInputLabel="Specify team size"
-                otherInputPlaceholder="Enter your team size"
+                otherInputLabel={t("auth:specifyTeamSize")}
+                otherInputPlaceholder={t("auth:teamSizePlaceholder")}
               />
             </When>
 
             <When truthy={!isPersonalUse && requireCompanyName}>
               <Input
-                label="Company/Organization"
+                label={t("auth:companyOrganization")}
                 placeholder="Shelf Inc."
                 name={zo.fields.companyName()}
                 error={zo.errors.companyName()?.message}
@@ -703,9 +758,9 @@ export default function Onboarding() {
                 className="flex w-full items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-left font-medium text-gray-700 hover:bg-gray-100"
               >
                 <span>
-                  Help us customize Shelf
+                  {t("auth:customizeShelf")}
                   <span className="ml-1 text-sm font-normal text-gray-500">
-                    (optional)
+                    ({t("auth:optional")})
                   </span>
                 </span>
                 <ChevronDownIcon
@@ -719,32 +774,38 @@ export default function Onboarding() {
             <CollapsibleContent>
               <div className="mt-4 grid gap-5 md:grid-cols-2">
                 <SelectWithOther
-                  label="What will you primarily track?"
+                  label={t("auth:trackingQuestion")}
                   name={zo.fields.primaryUseCase()}
                   options={PRIMARY_USE_CASE_OPTIONS}
+                  optionLabels={optionLabels}
+                  otherOptionLabel={t("auth:other")}
                   defaultValue={businessIntel?.primaryUseCase ?? null}
-                  otherInputLabel="Tell us what you'll track"
-                  otherInputPlaceholder="Describe your use case"
-                  placeholder="Select an option"
+                  otherInputLabel={t("auth:specifyTracking")}
+                  otherInputPlaceholder={t("auth:trackingPlaceholder")}
+                  placeholder={t("auth:selectOption")}
                 />
                 <SelectWithOther
-                  label="How do you currently track assets?"
+                  label={t("auth:currentTrackingQuestion")}
                   name={zo.fields.currentSolution()}
                   options={CURRENT_SOLUTION_OPTIONS}
+                  optionLabels={optionLabels}
+                  otherOptionLabel={t("auth:other")}
                   defaultValue={businessIntel?.currentSolution ?? null}
-                  otherInputLabel="Share your current solution"
-                  otherInputPlaceholder="Let us know what you use today"
-                  placeholder="Select an option"
+                  otherInputLabel={t("auth:specifyCurrentSolution")}
+                  otherInputPlaceholder={t("auth:currentSolutionPlaceholder")}
+                  placeholder={t("auth:selectOption")}
                 />
                 <div className="md:col-span-2">
                   <SelectWithOther
-                    label="When do you need this working?"
+                    label={t("auth:timelineQuestion")}
                     name={zo.fields.timeline()}
                     options={TIMELINE_OPTIONS}
+                    optionLabels={optionLabels}
+                    otherOptionLabel={t("auth:other")}
                     defaultValue={businessIntel?.timeline ?? null}
-                    otherInputLabel="Specify your timeline"
-                    otherInputPlaceholder="Tell us about your timeline"
-                    placeholder="Select an option"
+                    otherInputLabel={t("auth:specifyTimeline")}
+                    otherInputPlaceholder={t("auth:timelinePlaceholder")}
+                    placeholder={t("auth:selectOption")}
                   />
                 </div>
               </div>
@@ -759,7 +820,7 @@ export default function Onboarding() {
             width="full"
             disabled={disabled}
           >
-            Submit
+            {t("auth:submit")}
           </Button>
         </div>
       </Form>

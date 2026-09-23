@@ -1,4 +1,5 @@
 import type { Tag } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -153,6 +154,7 @@ export const handle = {
 export const ErrorBoundary = () => <ErrorContent />;
 
 export default function CategoriesPage() {
+  const { t } = useTranslation();
   const { isBaseOrSelfService } = useUserRoleHelper();
 
   return (
@@ -161,10 +163,10 @@ export default function CategoriesPage() {
         <Button
           to="new"
           role="link"
-          aria-label={`new tag`}
+          aria-label={t("inventory:newTag")}
           data-test-id="createNewTag"
         >
-          New tag
+          {t("inventory:newTag")}
         </Button>
       </Header>
       <ListContentWrapper>
@@ -179,17 +181,17 @@ export default function CategoriesPage() {
             isBaseOrSelfService ? undefined : <BulkActionsDropdown />
           }
           customEmptyStateContent={{
-            title: "No tags yet",
-            text: "Tags let you label assets with flexible keywords. Create tags to add custom metadata to your inventory.",
+            title: t("inventory:noTagsYet"),
+            text: t("inventory:noTagsHelp"),
             newButtonRoute: "/tags/new",
-            newButtonContent: "Create your first tag",
+            newButtonContent: t("inventory:createFirstTag"),
           }}
           ItemComponent={TagItem}
           headerChildren={
             <>
-              <Th>Description</Th>
-              <Th>Use for</Th>
-              <Th>Actions</Th>
+              <Th>{t("inventory:description")}</Th>
+              <Th>{t("inventory:useFor")}</Th>
+              <Th>{t("inventory:actions")}</Th>
             </>
           }
         />
@@ -198,40 +200,47 @@ export default function CategoriesPage() {
   );
 }
 
-const TagItem = ({
+function TagItem({
   item,
 }: {
   item: Pick<Tag, "id" | "description" | "name" | "useFor" | "color">;
-}) => (
-  <>
-    <Td className="w-1/4 text-left" title={`Tag: ${item.name}`}>
-      <TagBadge color={item.color ?? undefined} withDot={false}>
-        {item.name}
-      </TagBadge>
-    </Td>
-    <Td className="max-w-62 md:w-3/4">
-      {item.description ? (
-        <LineBreakText
-          className="md:w-3/4"
-          text={item.description}
-          numberOfLines={3}
-          charactersPerLine={60}
-        />
-      ) : null}
-    </Td>
-    <Td>
-      <div className="flex min-w-32 items-center gap-2">
-        {item.useFor && item.useFor.length > 0 ? (
-          item.useFor.map((useFor) => (
-            <GrayBadge key={useFor}>{formatEnum(useFor)}</GrayBadge>
-          ))
-        ) : (
-          <GrayBadge>All</GrayBadge>
-        )}
-      </div>
-    </Td>
-    <Td className="text-left">
-      <TagQuickActions tag={item} />
-    </Td>
-  </>
-);
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <Td
+        className="w-1/4 text-left"
+        title={t("inventory:tagLabel", { name: item.name })}
+      >
+        <TagBadge color={item.color ?? undefined} withDot={false}>
+          {item.name}
+        </TagBadge>
+      </Td>
+      <Td className="max-w-62 md:w-3/4">
+        {item.description ? (
+          <LineBreakText
+            className="md:w-3/4"
+            text={item.description}
+            numberOfLines={3}
+            charactersPerLine={60}
+          />
+        ) : null}
+      </Td>
+      <Td>
+        <div className="flex min-w-32 items-center gap-2">
+          {item.useFor && item.useFor.length > 0 ? (
+            item.useFor.map((useFor) => (
+              <GrayBadge key={useFor}>{formatEnum(useFor)}</GrayBadge>
+            ))
+          ) : (
+            <GrayBadge>{t("inventory:all")}</GrayBadge>
+          )}
+        </div>
+      </Td>
+      <Td className="text-left">
+        <TagQuickActions tag={item} />
+      </Td>
+    </>
+  );
+}

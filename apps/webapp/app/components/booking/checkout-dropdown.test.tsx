@@ -8,9 +8,11 @@
  */
 import type { ComponentProps } from "react";
 import { render, screen } from "@testing-library/react";
+import { I18nextProvider } from "react-i18next";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
+import { createI18n } from "~/i18n/i18n";
 import CheckoutDropdown from "./checkout-dropdown";
 
 // why: the hook reads the URL through the app's search-param helpers, which
@@ -40,9 +42,11 @@ type Props = ComponentProps<typeof CheckoutDropdown>;
 /** Renders the control inside a router, since the scan option is a link. */
 function renderDropdown(props: Omit<Props, "booking">) {
   return render(
-    <MemoryRouter>
-      <CheckoutDropdown booking={booking} {...props} />
-    </MemoryRouter>
+    <I18nextProvider i18n={createI18n("en")}>
+      <MemoryRouter>
+        <CheckoutDropdown booking={booking} {...props} />
+      </MemoryRouter>
+    </I18nextProvider>
   );
 }
 

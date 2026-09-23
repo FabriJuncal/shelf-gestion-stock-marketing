@@ -1,5 +1,6 @@
 import { InviteStatuses } from "@prisma/client";
-import type { LoaderFunctionArgs } from "react-router";
+import { useTranslation } from "react-i18next";
+import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import {
   data,
   redirect,
@@ -12,6 +13,8 @@ import { Button } from "~/components/shared/button";
 import { db } from "~/database/db.server";
 import { useSearchParams } from "~/hooks/search-params";
 import { useDisabled } from "~/hooks/use-disabled";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { signInWithEmail } from "~/modules/auth/service.server";
 import { generateRandomCode } from "~/modules/invite/helpers";
 import {
@@ -34,11 +37,32 @@ import {
 import jwt from "~/utils/jsonwebtoken.server";
 import { resolveUserDisplayName } from "~/utils/user";
 
-export async function loader({ context, params }: LoaderFunctionArgs) {
+async function resolveInviteRequestLanguage({
+  context,
+  request,
+}: Pick<LoaderFunctionArgs, "context" | "request">) {
+  let userLanguage: string | null = null;
+
+  if (context.isAuthenticated) {
+    const { userId } = context.getSession();
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { language: true },
+    });
+    userLanguage = user?.language ?? null;
+  }
+
+  return resolveRequestLanguage({ request, userLanguage });
+}
+
+export async function loader({ context, params, request }: LoaderFunctionArgs) {
+  let i18n = createI18n(await resolveRequestLanguage({ request }));
   const { inviteId } = getParams(params, z.object({ inviteId: z.string() }), {
     additionalData: { inviteId: params.inviteId },
   });
   try {
+    i18n = createI18n(await resolveInviteRequestLanguage({ context, request }));
+
     /** We get the invite based on the id of the params */
     const invite = await db.invite
       .findFirstOrThrow({
@@ -64,9 +88,8 @@ export async function loader({ context, params }: LoaderFunctionArgs) {
       .catch((cause) => {
         throw new ShelfError({
           cause,
-          title: "Invite not found",
-          message:
-            "The invitation you are trying to accept is either not found or expired",
+          title: i18n.t("auth:inviteNotFound"),
+          message: i18n.t("auth:inviteNotFoundHelp"),
           label: "Invite",
         });
       });
@@ -82,13 +105,14 @@ export async function loader({ context, params }: LoaderFunctionArgs) {
     }
 
     return payload({
+      title: i18n.t("auth:acceptInvite"),
       inviter: resolveUserDisplayName(invite.inviter),
       workspace: `${invite.organization.name}`,
     });
   } catch (cause) {
     const reason = makeShelfError(cause);
     throw data(
-      error({ ...reason, title: reason.title || "Accept team invite" }),
+      error({ ...reason, title: reason.title || i18n.t("auth:acceptInvite") }),
       {
         status: reason.status,
       }
@@ -96,10 +120,17 @@ export async function loader({ context, params }: LoaderFunctionArgs) {
   }
 }
 
-export const meta = () => [{ title: appendToMetaTitle("Accept team invite") }];
+export const meta: MetaFunction<typeof loader> = ({ data }) => [
+  { title: appendToMetaTitle(data?.title) },
+];
 
 export async function action({ context, params, request }: LoaderFunctionArgs) {
+  let language = await resolveRequestLanguage({ request });
+  let i18n = createI18n(language);
   try {
+    language = await resolveInviteRequestLanguage({ context, request });
+    i18n = createI18n(language);
+
     const { inviteId } = getParams(params, z.object({ inviteId: z.string() }), {
       additionalData: { inviteId: params.inviteId },
     });
@@ -108,8 +139,7 @@ export async function action({ context, params, request }: LoaderFunctionArgs) {
       await request.formData(),
       z.object({ token: z.string() }),
       {
-        message:
-          "The invitation link doesn't have a token provided. Please try clicking the link in your email again or request a new invite. If the issue persists, feel free to contact support",
+        message: i18n.t("auth:inviteTokenMissing"),
       }
     );
 
@@ -133,11 +163,10 @@ export async function action({ context, params, request }: LoaderFunctionArgs) {
     if (decodedInvite.id !== inviteId) {
       throw new ShelfError({
         cause: null,
-        title: "Invalid invite token",
+        title: i18n.t("auth:invalidInviteToken"),
         // Deliberately does not name the invite the token pointed at — the
         // value is attacker-chosen and echoing it confirms what was rejected.
-        message:
-          "This invitation link is invalid. Please click the link in your email again or request a new invite. If the issue persists, feel free to contact support",
+        message: i18n.t("auth:invalidInviteHelp"),
         additionalData: { inviteId },
         label: "Invite",
         status: 400,
@@ -155,13 +184,13 @@ export async function action({ context, params, request }: LoaderFunctionArgs) {
       status: InviteStatuses.ACCEPTED,
       password,
       formatPrefs,
+      language,
     });
 
     if (updatedInvite.status !== InviteStatuses.ACCEPTED) {
       throw new ShelfError({
         cause: null,
-        message:
-          "Something went wrong with updating your invite. Please try again",
+        message: i18n.t("auth:inviteUpdateFailed"),
         label: "Invite",
       });
     }
@@ -212,15 +241,14 @@ export async function action({ context, params, request }: LoaderFunctionArgs) {
     const reason = makeShelfError(cause);
     let titleOverride = null;
     if (cause instanceof Error && cause.name === "JsonWebTokenError") {
-      titleOverride = "Invalid invite token";
-      reason.message =
-        "The invitation link is invalid. Please try clicking the link in your email again or request a new invite. If the issue persists, feel free to contact support";
+      titleOverride = i18n.t("auth:invalidInviteToken");
+      reason.message = i18n.t("auth:invalidInviteHelp");
     }
 
     return data(
       error({
         ...reason,
-        title: titleOverride ?? (reason.title || "Accept team invite"),
+        title: titleOverride ?? (reason.title || i18n.t("auth:acceptInvite")),
       }),
       {
         status: reason.status,
@@ -244,6 +272,7 @@ function splitIntoStableLines(message: string) {
 }
 
 export default function AcceptInvite() {
+  const { t } = useTranslation();
   const { inviter, workspace } = useLoaderData<typeof loader>();
   const [searchParams] = useSearchParams();
   const disabled = useDisabled();
@@ -269,15 +298,14 @@ export default function AcceptInvite() {
               ))}
             </p>
             <Button to="/" variant={"secondary"}>
-              Back to home
+              {t("auth:backToHome")}
             </Button>
           </div>
         ) : (
           <div>
-            <h2>Accept invite</h2>
+            <h2>{t("auth:acceptInvite")}</h2>
             <p className="mt-2">
-              <strong>{inviter}</strong> invites you to join Shelf as a member
-              of <strong>{workspace}’s</strong> workspace.
+              {t("auth:inviteDescription", { inviter, workspace })}
             </p>
             <Form method="post" className="my-3">
               <input
@@ -287,7 +315,7 @@ export default function AcceptInvite() {
               />
 
               <Button type="submit" disabled={disabled || error}>
-                {disabled ? "Validating token..." : "Accept invite"}
+                {disabled ? t("auth:validatingToken") : t("auth:acceptInvite")}
               </Button>
             </Form>
           </div>
@@ -295,8 +323,7 @@ export default function AcceptInvite() {
       </div>
       <div className=" mx-4 mt-20 flex flex-col items-center text-center text-gray-600 md:mx-[-200px]">
         <p>
-          If you have any questions or need assistance, please don't hesitate to
-          contact our support team at{" "}
+          {t("auth:inviteSupport")}{" "}
           <Button variant={"link-gray"} to={`mailto:${SUPPORT_EMAIL}`}>
             {SUPPORT_EMAIL}
           </Button>

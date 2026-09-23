@@ -24,6 +24,7 @@ import {
   createUserAccountForTesting,
   createUserOrAttachOrg,
   defaultUserCategories,
+  updateUser,
 } from "./service.server";
 import { defaultFields } from "../asset-index-settings/helpers";
 
@@ -39,6 +40,7 @@ vitest.mock("~/database/db.server", () => ({
       create: vitest.fn().mockResolvedValue({}),
       findFirst: vitest.fn().mockResolvedValue(null),
       findUnique: vitest.fn().mockResolvedValue(null),
+      update: vitest.fn().mockResolvedValue({}),
     },
     organization: {
       findFirst: vitest.fn().mockResolvedValue({
@@ -57,6 +59,20 @@ vitest.mock("~/modules/asset-index-settings/service.server", () => ({
 }));
 
 const username = `test-user-${USER_ID}`;
+
+describe("updateUser", () => {
+  it("does not clear team-member names for preference-only updates", async () => {
+    vitest.mocked(db.user.update).mockClear();
+
+    await updateUser({ id: USER_ID, language: "es" });
+
+    expect(db.user.update).toHaveBeenCalledWith({
+      where: { id: USER_ID },
+      data: { id: USER_ID, language: "es" },
+      include: {},
+    });
+  });
+});
 
 describe(createUserAccountForTesting.name, () => {
   it("should return null if no auth account created", async () => {

@@ -1,59 +1,36 @@
-import type { FC } from "react";
-import SubHeading from "~/components/shared/sub-heading";
-
 export type OtpVerifyMode = "login" | "signup" | "confirm_signup";
 
 export type OtpPageData = Record<
   OtpVerifyMode,
   {
-    title: string;
-    SubHeading: FC<{ email: string }>;
-    buttonTitle: string;
+    titleKey: string;
+    subHeadingKey: string;
+    buttonKey: string;
   }
 >;
 
 export const OTP_PAGE_MAP: OtpPageData = {
   login: {
-    title: "Fill your code",
-    SubHeading: ({ email }) => (
-      <SubHeading className="-mt-4 text-center">
-        We have sent a code to{" "}
-        <span className="font-bold text-gray-900">{email}</span>. Fill the code
-        below to log in.
-      </SubHeading>
-    ),
-    buttonTitle: "Log In",
+    titleKey: "auth:otpLoginTitle",
+    subHeadingKey: "auth:otpLoginHelp",
+    buttonKey: "auth:login",
   },
   signup: {
-    title: "Create an account",
-    SubHeading: () => (
-      <SubHeading className="-mt-4 text-center">
-        Start your journey with Shelf.
-      </SubHeading>
-    ),
-    buttonTitle: "Create Account",
+    titleKey: "auth:createAccount",
+    subHeadingKey: "auth:otpSignupHelp",
+    buttonKey: "auth:createAccount",
   },
   confirm_signup: {
-    title: "Confirm your email",
-    SubHeading: ({ email }) => (
-      <SubHeading className="-mt-4 text-center">
-        We have sent a code to{" "}
-        <span className="font-bold text-gray-900">{email}</span>. Fill the code
-        below to confirm you email.
-      </SubHeading>
-    ),
-    buttonTitle: "Confirm",
+    titleKey: "auth:confirmEmail",
+    subHeadingKey: "auth:otpConfirmHelp",
+    buttonKey: "auth:confirm",
   },
 };
 
 export const DEFAULT_PAGE_DATA: OtpPageData["login"] = {
-  title: "One Time Password",
-  buttonTitle: "Continue",
-  SubHeading: () => (
-    <SubHeading className="-mt-4 text-center">
-      Please confirm your OTP to continue
-    </SubHeading>
-  ),
+  titleKey: "auth:otp",
+  buttonKey: "auth:continue",
+  subHeadingKey: "auth:otpDefaultHelp",
 };
 
 export function getOtpPageData(mode: OtpVerifyMode) {

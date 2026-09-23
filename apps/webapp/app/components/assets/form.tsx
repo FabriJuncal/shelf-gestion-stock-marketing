@@ -8,6 +8,7 @@ import {
   PopoverContent,
 } from "@radix-ui/react-popover";
 import { useAtom, useAtomValue } from "jotai";
+import { useTranslation } from "react-i18next";
 import {
   useActionData,
   useLoaderData,
@@ -269,6 +270,7 @@ export const AssetForm = ({
   referer,
   bulkMode = false,
 }: Props) => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const { canUseBarcodes } = useBarcodePermissions();
   // Workspace's current code-display preference — used by PreferredBarcodeSelector
@@ -642,7 +644,7 @@ export const AssetForm = ({
           if (isQtyTracked) {
             const formData = new FormData(e.currentTarget);
             if (!formData.get("consumptionType")) {
-              setConsumptionTypeError("Please select a consumption type");
+              setConsumptionTypeError(t("inventory:selectConsumptionType"));
               e.preventDefault();
               e.stopPropagation();
               return false;
@@ -678,12 +680,14 @@ export const AssetForm = ({
         <div className="flex items-start justify-between border-b pb-5">
           <div className=" ">
             <h2 className="mb-1 text-[18px] font-semibold">
-              {bulkMode ? "Bulk create from model" : "Basic fields"}
+              {bulkMode
+                ? t("inventory:bulkCreateFromModel")
+                : t("inventory:basicFields")}
             </h2>
             <p>
               {bulkMode
-                ? "Create multiple assets from a model in one go. Common fields below apply to every asset created."
-                : "Basic information about your asset."}
+                ? t("inventory:bulkCreateDescription")
+                : t("inventory:basicFieldsDescription")}
             </p>
           </div>
           <div className="hidden flex-1 justify-end gap-2 md:flex">
@@ -697,13 +701,13 @@ export const AssetForm = ({
 
         <When truthy={!bulkMode}>
           <FormRow
-            rowLabel={"Name"}
+            rowLabel={t("inventory:name")}
             className="border-b-0 pb-[10px]"
             required={true}
           >
             <Input
               ref={titleInputRef}
-              label="Name"
+              label={t("inventory:name")}
               hideLabel
               name="title"
               disabled={disabled}
@@ -726,7 +730,7 @@ export const AssetForm = ({
 
         <When truthy={bulkMode}>
           <FormRow
-            rowLabel="Batch"
+            rowLabel={t("inventory:batch")}
             className="border-b-0 pb-[10px]"
             subHeading={
               <p>
@@ -743,7 +747,7 @@ export const AssetForm = ({
               <div className="flex flex-col gap-3 md:flex-row md:items-end">
                 <div className="flex-1">
                   <Input
-                    label="Name template"
+                    label={t("inventory:nameTemplate")}
                     name="nameTemplate"
                     disabled={disabled}
                     value={bulkNameTemplate}
@@ -763,7 +767,7 @@ export const AssetForm = ({
                 <div className="w-full md:w-32">
                   <Input
                     type="number"
-                    label="Count"
+                    label={t("inventory:count")}
                     name="count"
                     disabled={disabled}
                     value={bulkCount}
@@ -790,7 +794,7 @@ export const AssetForm = ({
                 <div className="w-full md:w-32">
                   <Input
                     type="number"
-                    label="Start at"
+                    label={t("inventory:startAt")}
                     name="startNumber"
                     disabled={disabled}
                     value={bulkStartNumber}
@@ -813,12 +817,12 @@ export const AssetForm = ({
 
         <When truthy={!bulkMode}>
           <FormRow
-            rowLabel={"Tracking method"}
+            rowLabel={t("inventory:trackingMethod")}
             className="border-b-0 pb-[10px]"
             subHeading={
               isEditMode
-                ? "Tracking method cannot be changed after creation."
-                : "Choose how this asset is tracked. This cannot be changed later."
+                ? t("inventory:trackingMethodImmutable")
+                : t("inventory:trackingMethodHelp")
             }
             required={true}
           >
@@ -840,14 +844,14 @@ export const AssetForm = ({
         <When truthy={isQtyTracked}>
           <div className="flex flex-col gap-2">
             <FormRow
-              rowLabel="Quantity"
+              rowLabel={t("inventory:quantity")}
               className="border-b-0 pb-[10px]"
-              subHeading="Total number of items in this pool."
+              subHeading={t("inventory:quantityHelp")}
               required={true}
             >
               <Input
                 type="number"
-                label="Quantity"
+                label={t("inventory:quantity")}
                 hideLabel
                 name="quantity"
                 disabled={disabled}
@@ -864,12 +868,12 @@ export const AssetForm = ({
             </FormRow>
 
             <FormRow
-              rowLabel="Unit of measure"
+              rowLabel={t("inventory:unitOfMeasure")}
               className="border-b-0 pb-[10px]"
-              subHeading="Label for the unit (e.g. pcs, boxes, liters)."
+              subHeading={t("inventory:unitOfMeasureHelp")}
             >
               <Input
-                label="Unit of measure"
+                label={t("inventory:unitOfMeasure")}
                 hideLabel
                 name="unitOfMeasure"
                 disabled={disabled}
@@ -880,13 +884,13 @@ export const AssetForm = ({
             </FormRow>
 
             <FormRow
-              rowLabel="Min quantity"
+              rowLabel={t("inventory:minQuantity")}
               className="border-b-0 pb-[10px]"
-              subHeading="Low-stock alert threshold. You will be notified when available quantity falls to or below this number."
+              subHeading={t("inventory:minQuantityHelp")}
             >
               <Input
                 type="number"
-                label="Min quantity"
+                label={t("inventory:minQuantity")}
                 hideLabel
                 name="minQuantity"
                 disabled={disabled}
@@ -898,11 +902,9 @@ export const AssetForm = ({
             </FormRow>
 
             <FormRow
-              rowLabel="Consumption type"
+              rowLabel={t("inventory:consumptionType")}
               className="border-b-0 pb-[10px]"
-              subHeading={
-                'Choose "Used up (one-way)" for items that are consumed and not returned, or "Returnable (two-way)" for items that are checked out and returned.'
-              }
+              subHeading={t("inventory:consumptionTypeHelp")}
               required={true}
             >
               <ConsumptionTypeSelect
@@ -921,18 +923,18 @@ export const AssetForm = ({
             from the same sequence. Hide entirely under bulkMode. */}
         <When truthy={!bulkMode}>
           <FormRow
-            rowLabel={"Asset ID"}
+            rowLabel={t("inventory:assetId")}
             className="border-b-0 pb-[10px]"
             subHeading={
               id
-                ? "This is the unique identifier for this asset"
-                : "This sequential ID will be assigned when the asset is created"
+                ? t("inventory:assetIdExistingHelp")
+                : t("inventory:assetIdNewHelp")
             }
           >
             <div className="flex items-center gap-2">
               <div className="shrink-0">
                 <Input
-                  label="Prefix"
+                  label={t("inventory:prefix")}
                   hideLabel
                   name="sequentialIdPrefix"
                   disabled={true}
@@ -944,7 +946,7 @@ export const AssetForm = ({
               <span className="font-medium text-gray-400">-</span>
               <div className="grow">
                 <Input
-                  label="Number"
+                  label={t("inventory:number")}
                   hideLabel
                   name="sequentialIdNumber"
                   disabled={true}
@@ -960,7 +962,7 @@ export const AssetForm = ({
           </FormRow>
         </When>
 
-        <FormRow rowLabel={"Main image"} className="pt-[10px]">
+        <FormRow rowLabel={t("inventory:mainImage")} className="pt-[10px]">
           <div className="flex items-center gap-2">
             {/*
               One preview for both tiers of the cascade. `clearMainImage` makes
@@ -982,7 +984,7 @@ export const AssetForm = ({
                     : null,
                   assetModel: inheritableAssetModelImage,
                 }}
-                alt={`${title} main image`}
+                alt={t("inventory:assetMainImage", { asset: title })}
               />
             ) : inheritableAssetModelImage ? (
               <AssetImage
@@ -994,9 +996,10 @@ export const AssetForm = ({
                   mainImageExpiration: null,
                   assetModel: inheritableAssetModelImage,
                 }}
-                alt={`Image from asset model ${
-                  selectedAssetModel?.name ?? "selected model"
-                }`}
+                alt={t("inventory:imageFromModel", {
+                  model:
+                    selectedAssetModel?.name ?? t("inventory:selectedModel"),
+                })}
               />
             ) : null}
             <div>
@@ -1004,23 +1007,24 @@ export const AssetForm = ({
                 <p className="mb-1 text-sm text-gray-600">
                   {showOwnImagePreview ? (
                     <>
-                      This asset uses its own image.{" "}
+                      {t("inventory:assetUsesOwnImage")}{" "}
                       <Button
                         type="button"
                         variant="link"
                         className="!p-0 text-sm"
                         onClick={() => setClearMainImage(true)}
                       >
-                        Use the model's image instead
+                        {t("inventory:useModelImage")}
                       </Button>
                     </>
                   ) : (
                     <>
-                      Using the image from{" "}
+                      {t("inventory:usingImageFrom")}{" "}
                       <span className="font-medium text-gray-700">
-                        {selectedAssetModel?.name ?? "the selected model"}
+                        {selectedAssetModel?.name ??
+                          t("inventory:selectedModelFallback")}
                       </span>
-                      . Upload one below to override it for this asset.
+                      . {t("inventory:imageOverrideHelp")}
                       <When truthy={clearMainImage}>
                         {" "}
                         <Button
@@ -1029,7 +1033,7 @@ export const AssetForm = ({
                           className="!p-0 text-sm"
                           onClick={() => setClearMainImage(false)}
                         >
-                          Undo
+                          {t("inventory:undo")}
                         </Button>
                       </When>
                     </>
@@ -1056,19 +1060,19 @@ export const AssetForm = ({
                     className="!p-0 text-sm"
                     onClick={() => setClearMainImage(!clearMainImage)}
                   >
-                    {clearMainImage ? "Undo remove image" : "Remove image"}
+                    {clearMainImage
+                      ? t("inventory:undoRemoveImage")
+                      : t("inventory:removeImage")}
                   </Button>
                 </p>
               </When>
               <p className="hidden lg:block">
                 <HoverCard openDelay={50} closeDelay={50}>
                   <HoverCardTrigger className={tw("inline-flex w-full  ")}>
-                    Accepts PNG, JPG, JPEG, or WebP (max.8 MB)
+                    {t("inventory:assetImageUploadHelp")}
                   </HoverCardTrigger>
                   <HoverCardContent side="left">
-                    Images will be automatically resized on upload. Width will
-                    be set at 1200px and height will be adjusted accordingly to
-                    keep the aspect ratio.
+                    {t("inventory:assetImageUploadDetails")}
                   </HoverCardContent>
                 </HoverCard>
               </p>
@@ -1078,14 +1082,14 @@ export const AssetForm = ({
                 name="mainImage"
                 type="file"
                 onChange={validateFile}
-                label={"Main image"}
+                label={t("inventory:mainImage")}
                 hideLabel
                 error={mainImageError}
                 className="mt-2"
                 inputClassName="border-0 shadow-none p-0 rounded-none"
               />
               <p className="mt-2 lg:hidden">
-                Accepts PNG, JPG, JPEG, or WebP (max.8 MB)
+                {t("inventory:assetImageUploadHelp")}
               </p>
             </div>
           </div>
@@ -1093,24 +1097,18 @@ export const AssetForm = ({
 
         <div>
           <FormRow
-            rowLabel={"Description"}
-            subHeading={
-              <p>
-                This is the initial object description. It will be shown on the
-                asset’s overview page. You can always change it. Maximum 1000
-                characters.
-              </p>
-            }
+            rowLabel={t("inventory:description")}
+            subHeading={<p>{t("inventory:assetDescriptionHelp")}</p>}
             className="border-b-0"
           >
             <Input
               inputType="textarea"
               maxLength={1000}
-              label={"Description"}
+              label={t("inventory:description")}
               name="description"
               defaultValue={description || ""}
               hideLabel
-              placeholder="Add a description for your asset."
+              placeholder={t("inventory:assetDescriptionPlaceholder")}
               disabled={disabled}
               data-test-id="assetDescription"
               className="w-full"
@@ -1126,18 +1124,17 @@ export const AssetForm = ({
         <When truthy={!bulkMode}>{assetModelFormRow}</When>
 
         <FormRow
-          rowLabel="Category"
+          rowLabel={t("inventory:category")}
           subHeading={
             <p>
-              Make it unique. Each asset can have 1 category. It will show on
-              your index.{" "}
+              {t("inventory:categoryHelp")}{" "}
               <Button
                 to="/categories/new"
                 variant="link-gray"
                 className="text-gray-600 underline"
                 target="_blank"
               >
-                Create categories
+                {t("inventory:createCategories")}
               </Button>
             </p>
           }
@@ -1152,8 +1149,8 @@ export const AssetForm = ({
             }
             model={{ name: "category", queryKey: "name" }}
             triggerWrapperClassName="flex flex-col !gap-0 justify-start items-start [&_.inner-label]:w-full [&_.inner-label]:text-left "
-            contentLabel="Categories"
-            label="Category"
+            contentLabel={t("inventory:categories")}
+            label={t("inventory:category")}
             hideLabel
             initialDataKey="categories"
             countKey="totalCategories"
@@ -1162,9 +1159,9 @@ export const AssetForm = ({
             allowClear={true}
             extraContent={({ onItemCreated, closePopover }) => (
               <InlineEntityCreationDialog
-                title="Create new category"
+                title={t("inventory:createNewCategory")}
                 type="category"
-                buttonLabel="Create new category"
+                buttonLabel={t("inventory:createNewCategory")}
                 onCreated={(created) => {
                   if (created?.type !== "category") return;
                   const category = created.entity;
@@ -1182,17 +1179,17 @@ export const AssetForm = ({
         </FormRow>
 
         <FormRow
-          rowLabel="Tags"
+          rowLabel={t("inventory:tags")}
           subHeading={
             <p>
-              Tags can help you organise your database. They can be combined.{" "}
+              {t("inventory:tagsHelp")}{" "}
               <Button
                 to="/tags/new"
                 className="text-gray-600 underline"
                 target="_blank"
                 variant="link-gray"
               >
-                Create tags
+                {t("inventory:createTags")}
               </Button>
             </p>
           }
@@ -1207,18 +1204,17 @@ export const AssetForm = ({
         </FormRow>
 
         <FormRow
-          rowLabel="Location"
+          rowLabel={t("inventory:location")}
           subHeading={
             <p>
-              A location is a place where an item is supposed to be located.
-              This is different than the last scanned location{" "}
+              {t("inventory:locationHelp")}{" "}
               <Button
                 to="/locations/new"
                 className="text-gray-600 underline"
                 target="_blank"
                 variant="link-gray"
               >
-                Create locations
+                {t("inventory:createLocations")}
               </Button>
             </p>
           }
@@ -1234,9 +1230,9 @@ export const AssetForm = ({
               triggerClassName="disabled w-full cursor-not-allowed"
               reason={
                 <>
-                  This asset's location is managed by its parent kit{" "}
-                  <strong>"{kitMembership?.name}"</strong>. Update the kit's
-                  location instead.
+                  {t("inventory:locationManagedByParentKit", {
+                    kit: kitMembership?.name,
+                  })}
                 </>
               }
             >
@@ -1247,8 +1243,8 @@ export const AssetForm = ({
                 triggerWrapperClassName="flex flex-col !gap-0 justify-start items-start [&_.inner-label]:w-full [&_.inner-label]:text-left "
                 defaultValue={locationId || undefined}
                 model={{ name: "location", queryKey: "name" }}
-                contentLabel="Locations"
-                label="Location"
+                contentLabel={t("inventory:locations")}
+                label={t("inventory:location")}
                 hideLabel
                 initialDataKey="locations"
                 countKey="totalLocations"
@@ -1264,8 +1260,8 @@ export const AssetForm = ({
               triggerWrapperClassName="flex flex-col !gap-0 justify-start items-start [&_.inner-label]:w-full [&_.inner-label]:text-left "
               defaultValue={locationId || undefined}
               model={{ name: "location", queryKey: "name" }}
-              contentLabel="Locations"
-              label="Location"
+              contentLabel={t("inventory:locations")}
+              label={t("inventory:location")}
               hideLabel
               initialDataKey="locations"
               countKey="totalLocations"
@@ -1274,8 +1270,8 @@ export const AssetForm = ({
               extraContent={({ onItemCreated, closePopover }) => (
                 <InlineEntityCreationDialog
                   type="location"
-                  title="Create new location"
-                  buttonLabel="Create new location"
+                  title={t("inventory:createNewLocation")}
+                  buttonLabel={t("inventory:createNewLocation")}
                   onCreated={(created) => {
                     if (created?.type !== "location") return;
                     const location = created.entity;
@@ -1305,19 +1301,14 @@ export const AssetForm = ({
         </FormRow>
 
         <FormRow
-          rowLabel={"Value"}
-          subHeading={
-            <p>
-              Specify the value of assets to get an idea of the total value of
-              your inventory.
-            </p>
-          }
+          rowLabel={t("inventory:value")}
+          subHeading={<p>{t("inventory:valueHelp")}</p>}
           className="border-b-0 py-[10px]"
         >
           <div className="relative w-full">
             <Input
               type="number"
-              label="Value"
+              label={t("inventory:value")}
               inputClassName="pl-[70px] valuation-input"
               hideLabel
               name="valuation"
@@ -1343,9 +1334,9 @@ export const AssetForm = ({
           {canUseBarcodes ? (
             <>
               <FormRow
-                rowLabel={"Barcodes"}
+                rowLabel={t("inventory:barcodes")}
                 className="border-b-0"
-                subHeading="Add additional barcodes to this asset (Code 128, Code 39, or Data Matrix). Note: Each asset automatically gets a default Shelf QR code for tracking."
+                subHeading={t("inventory:barcodesHelp")}
               >
                 <BarcodesInput
                   ref={barcodesInputRef}
@@ -1373,7 +1364,7 @@ export const AssetForm = ({
               />
             </>
           ) : (
-            <FormRow rowLabel={"Barcodes"} className="border-b-0">
+            <FormRow rowLabel={t("inventory:barcodes")} className="border-b-0">
               <UnlockBarcodesBanner />
             </FormRow>
           )}
@@ -1413,42 +1404,50 @@ const Actions = ({
    * sense — one submit already creates many assets, and the success
    * modal offers the natural follow-up CTAs — so the caller hides it. */
   showAddAnother?: boolean;
-}) => (
-  <>
-    {/* Save button is first in DOM order so Enter key triggers it by default */}
-    <Button type="submit" disabled={disabled} className="order-last">
-      Save
-    </Button>
+}) => {
+  const { t } = useTranslation();
 
-    <ButtonGroup>
-      <Button to={cancelTo} variant="secondary" disabled={disabled}>
-        Cancel
+  return (
+    <>
+      {/* Save button is first in DOM order so Enter key triggers it by default */}
+      <Button type="submit" disabled={disabled} className="order-last">
+        {t("common:save")}
       </Button>
-      {showAddAnother ? <AddAnother disabled={disabled} /> : null}
-    </ButtonGroup>
-  </>
-);
 
-const AddAnother = ({ disabled }: { disabled: boolean }) => (
-  <TooltipProvider delayDuration={100}>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="submit"
-          variant="secondary"
-          disabled={disabled}
-          name="addAnother"
-          value="true"
-        >
-          Add another
+      <ButtonGroup>
+        <Button to={cancelTo} variant="secondary" disabled={disabled}>
+          {t("common:cancel")}
         </Button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">
-        <p className="text-sm">Save the asset and add a new one</p>
-      </TooltipContent>
-    </Tooltip>
-  </TooltipProvider>
-);
+        {showAddAnother ? <AddAnother disabled={disabled} /> : null}
+      </ButtonGroup>
+    </>
+  );
+};
+
+const AddAnother = ({ disabled }: { disabled: boolean }) => {
+  const { t } = useTranslation();
+
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={disabled}
+            name="addAnother"
+            value="true"
+          >
+            {t("inventory:addAnother")}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p className="text-sm">{t("inventory:saveAssetAndAddAnother")}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 /**
  * Live-preview block rendered inside the bulk-create row.

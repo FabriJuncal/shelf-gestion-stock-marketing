@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { Roles } from "@prisma/client";
 import { useAtom } from "jotai";
 import { ScanBarcodeIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type {
   LinksFunction,
   LoaderFunctionArgs,
@@ -14,6 +15,7 @@ import {
   NavLink,
   Outlet,
   useLoaderData,
+  useLocation,
 } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
 import { AtomsResetHandler } from "~/atoms/atoms-reset-handler";
@@ -296,6 +298,8 @@ export const meta: MetaFunction<typeof loader> = ({ error }) => {
 
 export default function App() {
   useCrisp();
+  const { t } = useTranslation();
+  const location = useLocation();
   const {
     disabledTeamOrg,
     hasUnpaidInvoice,
@@ -332,6 +336,15 @@ export default function App() {
         <AtomsResetHandler />
         <AppSidebar id="navigation" />
         <SidebarInset id="main-content" tabIndex={-1}>
+          {new URLSearchParams(location.search).get("languageSync") ===
+          "pending" ? (
+            <div
+              role="status"
+              className="border-b border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-800"
+            >
+              {t("common:languageSyncPending")}
+            </div>
+          ) : null}
           {warnForNoPaymentMethod ? <MissingPaymentMethodBanner /> : null}
           {hasUnpaidInvoice ? <UnpaidInvoiceBanner /> : null}
           {disabledTeamOrg ? (

@@ -1,5 +1,6 @@
 import { AuthApiError } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AUTH_ERROR_CODES } from "~/modules/auth/localize-error.server";
 import { ShelfError } from "~/utils/error";
 
 // why: isolate from Prisma — we only verify each function's branching.
@@ -39,6 +40,7 @@ const mockUser = await import("~/modules/user/service.server");
 import {
   checkDomainSSOStatus,
   resolveUserAndOrgForSsoCallback,
+  validateNonSSOSignup,
 } from "~/utils/sso.server";
 
 const SUPABASE_UUID = "auth-user-supabase-uuid";
@@ -96,9 +98,15 @@ describe("resolveUserAndOrgForSsoCallback", () => {
         app_metadata: { provider: "email" },
       });
 
-      await expect(resolveUserAndOrgForSsoCallback(baseInput)).rejects.toThrow(
-        /linked to a personal account/
-      );
+      await expect(
+        resolveUserAndOrgForSsoCallback(baseInput)
+      ).rejects.toMatchObject({
+        message: expect.stringMatching(/linked to a personal account/),
+        additionalData: {
+          authErrorCode: AUTH_ERROR_CODES.ssoEmailConflict,
+          email: baseAuthSession.email,
+        },
+      });
 
       expect(mockUser.updateUserFromSSO).not.toHaveBeenCalled();
       expect(mockUser.createUserFromSSO).not.toHaveBeenCalled();
@@ -202,7 +210,10 @@ describe("resolveUserAndOrgForSsoCallback", () => {
       // @ts-expect-error - vitest mock type
       mockUser.createUserFromSSO.mockResolvedValue(created);
 
-      const result = await resolveUserAndOrgForSsoCallback(baseInput);
+      const result = await resolveUserAndOrgForSsoCallback({
+        ...baseInput,
+        language: "es",
+      });
 
       expect(mockAuth.getAuthUserById).not.toHaveBeenCalled();
       expect(mockUser.createUserFromSSO).toHaveBeenCalledWith(
@@ -214,7 +225,8 @@ describe("resolveUserAndOrgForSsoCallback", () => {
         }),
         // 3rd arg: browser-detected format prefs forwarded to the new-user
         // branch. Undefined here — this call site passes no hints.
-        undefined
+        undefined,
+        "es"
       );
       expect(mockAuth.deleteAuthAccount).not.toHaveBeenCalled();
       expect(result).toEqual(created);
@@ -423,5 +435,25 @@ describe("checkDomainSSOStatus", () => {
     // Nothing to look up, so neither query runs.
     expect(mockDb.db.$queryRaw).not.toHaveBeenCalled();
     expect(mockDb.db.organization.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("validateNonSSOSignup", () => {
+  it("tags SSO-domain rejections for route-level localization", async () => {
+    // @ts-expect-error mock setup
+    mockDb.db.$queryRaw.mockResolvedValue([{ ssoProviderId: "provider-1" }]);
+    // @ts-expect-error mock setup
+    mockDb.db.organization.findMany.mockResolvedValue([]);
+
+    await expect(
+      validateNonSSOSignup("jane@example.com")
+    ).rejects.toMatchObject({
+      additionalData: {
+        authErrorCode: AUTH_ERROR_CODES.ssoDomainRequired,
+        email: "jane@example.com",
+      },
+      shouldBeCaptured: false,
+      status: 400,
+    });
   });
 });

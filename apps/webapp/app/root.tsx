@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { User } from "@prisma/client";
 import nProgressStyles from "nprogress/nprogress.css?url";
+import { I18nextProvider } from "react-i18next";
 import type {
   LinksFunction,
   LoaderFunctionArgs,
@@ -27,6 +28,9 @@ import { TooltipProvider } from "./components/shared/tooltip";
 import { config } from "./config/shelf.config";
 import { db } from "./database/db.server";
 import { useNprogress } from "./hooks/use-nprogress";
+import { createI18n } from "./i18n/i18n";
+import { resolveRequestLanguage } from "./i18n/language.server";
+import { isAuthSessionTransition } from "./i18n/revalidation";
 import { detectAndPersistFormatPrefs } from "./modules/user/format-prefs.server";
 import fontsStylesheetUrl from "./styles/fonts.css?url";
 import globalStylesheetUrl from "./styles/global.css?url";
@@ -99,6 +103,7 @@ export const loader = async ({ request, context }: LoaderFunctionArgs) => {
   // snapshots this once per full navigation, and additionally re-runs right
   // after the user saves new format prefs so the snapshot never goes stale.
   let formatPrefs: ResolvedFormatPrefs;
+  let userLanguage: string | null = null;
   try {
     const { userId } = context.getSession();
     const userPrefs = await db.user.findFirst({
@@ -108,9 +113,11 @@ export const loader = async ({ request, context }: LoaderFunctionArgs) => {
         timeFormat: true,
         weekStart: true,
         timeZone: true,
+        language: true,
       },
     });
     formatPrefs = resolveFormatPrefs(userPrefs, hints);
+    userLanguage = userPrefs?.language ?? null;
 
     // Lazy backfill: pre-existing users have null pref columns. Snapshot the
     // detected values once, fire-and-forget (mirrors recordMobileActivity).
@@ -135,12 +142,15 @@ export const loader = async ({ request, context }: LoaderFunctionArgs) => {
     formatPrefs = resolveFormatPrefs(null, hints);
   }
 
+  const language = await resolveRequestLanguage({ request, userLanguage });
+
   return payload({
     env: getBrowserEnv(),
     maintenanceMode: MAINTENANCE_MODE && !admin,
     requestInfo: {
       hints,
       formatPrefs,
+      language,
     },
   });
 };
@@ -163,8 +173,16 @@ export const loader = async ({ request, context }: LoaderFunctionArgs) => {
  *   submissions); `undefined` for plain GET navigations.
  * @returns `true` only after the format-prefs save, `false` otherwise.
  */
-export const shouldRevalidate: ShouldRevalidateFunction = ({ formData }) =>
-  formData?.get("intent") === "updateFormatPrefs";
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+  currentUrl,
+  formData,
+  formAction,
+}) =>
+  formData?.get("intent") === "updateFormatPrefs" ||
+  formData?.get("intent") === "updateLanguage" ||
+  formAction?.endsWith("/api/language") === true ||
+  isAuthSessionTransition(formAction) ||
+  isAuthSessionTransition(currentUrl.pathname);
 
 /**
  * Subscribe/snapshot helpers for reading `navigator.cookieEnabled` via
@@ -182,6 +200,11 @@ const getCookieEnabledServerSnapshot = () => true;
 export function Layout({ children }: { children: ReactNode }) {
   const data = useRouteLoaderData<typeof loader>("root");
   const nonce = useNonce();
+  const documentI18n = useMemo(
+    () => createI18n(data?.requestInfo.language ?? "en"),
+    [data?.requestInfo.language]
+  );
+  const translate = documentI18n.t.bind(documentI18n);
   const hasCookies = useSyncExternalStore(
     subscribeCookieEnabled,
     getCookieEnabledSnapshot,
@@ -189,7 +212,7 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <html lang="en" className="overflow-hidden">
+    <html lang={data?.requestInfo.language ?? "en"} className="overflow-hidden">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -224,16 +247,16 @@ export function Layout({ children }: { children: ReactNode }) {
             inline check there flags the browser; hydration is skipped then. */}
         <div id={UNSUPPORTED_BROWSER_SCREEN_ID}>
           <BlockInteractions
-            title="Your browser is out of date"
-            content="Shelf needs a current browser. Please update your browser, or switch to the latest Chrome, Firefox, Edge or Safari."
+            title={translate("common:browserOutdated")}
+            content={translate("common:browserOutdatedHelp")}
             icon="x"
           />
         </div>
 
         <noscript>
           <BlockInteractions
-            title="JavaScript is disabled"
-            content="This website requires JavaScript to be enabled to function properly. Please enable JavaScript or change browser and try again."
+            title={translate("common:javascriptDisabled")}
+            content={translate("common:javascriptDisabledHelp")}
             icon="x"
           />
         </noscript>
@@ -247,8 +270,8 @@ export function Layout({ children }: { children: ReactNode }) {
           <TooltipProvider delayDuration={100}>{children}</TooltipProvider>
         ) : (
           <BlockInteractions
-            title="Cookies are disabled"
-            content="This website requires cookies to be enabled to function properly. Please enable cookies and try again."
+            title={translate("common:cookiesDisabled")}
+            content={translate("common:cookiesDisabledHelp")}
             icon="x"
           />
         )}
@@ -270,8 +293,11 @@ export function Layout({ children }: { children: ReactNode }) {
 
 function App() {
   useNprogress();
-  const { maintenanceMode } = useLoaderData<typeof loader>();
-
+  const { maintenanceMode, requestInfo } = useLoaderData<typeof loader>();
+  const i18n = useMemo(
+    () => createI18n(requestInfo.language),
+    [requestInfo.language]
+  );
   return maintenanceMode ? (
     <BlockInteractions
       title={"Maintenance is being performed"}
@@ -285,9 +311,11 @@ function App() {
       icon="tool"
     />
   ) : (
-    <AnimationProvider>
-      <Outlet />
-    </AnimationProvider>
+    <I18nextProvider i18n={i18n}>
+      <AnimationProvider>
+        <Outlet />
+      </AnimationProvider>
+    </I18nextProvider>
   );
 }
 

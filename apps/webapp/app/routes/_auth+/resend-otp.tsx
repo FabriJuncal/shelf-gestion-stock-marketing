@@ -1,6 +1,9 @@
 import type { ActionFunctionArgs } from "react-router";
 import { data } from "react-router";
 import { z } from "zod";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
+import { localizeAuthError } from "~/modules/auth/localize-error.server";
 import { sendOTP } from "~/modules/auth/service.server";
 import { makeShelfError, notAllowedMethod } from "~/utils/error";
 
@@ -13,6 +16,9 @@ import {
 import { validEmail } from "~/utils/misc";
 
 export async function action({ request }: ActionFunctionArgs) {
+  const language = await resolveRequestLanguage({ request });
+  const i18n = createI18n(language);
+
   try {
     const method = getActionMethod(request);
 
@@ -25,23 +31,21 @@ export async function action({ request }: ActionFunctionArgs) {
               .string()
               .transform((email) => email.toLowerCase())
               .refine(validEmail, () => ({
-                message: "Please enter a valid email",
+                message: i18n.t("auth:invalidEmail"),
               })),
           }),
           { shouldBeCaptured: false }
         );
 
-        await sendOTP(email);
+        await sendOTP(email, language);
         return payload({ success: true });
       }
     }
 
     throw notAllowedMethod(method);
   } catch (cause) {
-    //@ts-expect-error
-    const isRateLimitError = cause.code === "over_email_send_rate_limit";
-
-    const reason = makeShelfError(cause, {}, !isRateLimitError);
-    return data(error(reason), { status: reason.status });
+    const reason = makeShelfError(cause);
+    const localizedReason = localizeAuthError(reason, (key) => i18n.t(key));
+    return data(error(localizedReason), { status: localizedReason.status });
   }
 }

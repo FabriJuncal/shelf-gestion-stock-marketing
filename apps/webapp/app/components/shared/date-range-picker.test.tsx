@@ -20,6 +20,17 @@ import type {
 
 import { DateRangePicker } from "./date-range-picker";
 
+// why: this suite isolates range wire values and format preferences from the
+// root i18n provider; it uses the English default language intentionally.
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    i18n: { language: "en", resolvedLanguage: "en" },
+    t: (key: string) =>
+      ({ "common:selectStartEndDate": "Select start and end date" })[key] ??
+      key,
+  }),
+}));
+
 // why: useDateFormatter reads useRequestInfo(), which needs the root loader's
 // RequestInfo context (unavailable in a unit test). Stub the hook but back it
 // with the REAL formatDate bound to MMM_DD_YYYY + UTC prefs, so the trigger

@@ -1,5 +1,6 @@
 import type { AuditStatus } from "@prisma/client";
 import { AUDIT_STATUS_LABELS, AUDIT_STATUS_TONES } from "@shelf/labels";
+import { useTranslation } from "react-i18next";
 import { toneBadgeColors } from "~/utils/status-tone-colors";
 import { Badge } from "../shared/badge";
 
@@ -14,6 +15,7 @@ import { Badge } from "../shared/badge";
  * @param status - The audit status from Prisma enum
  */
 export function AuditStatusBadge({ status }: { status: AuditStatus }) {
+  const { t } = useTranslation();
   const colors = toneBadgeColors(AUDIT_STATUS_TONES[status]);
 
   return (
@@ -22,7 +24,9 @@ export function AuditStatusBadge({ status }: { status: AuditStatus }) {
           already sentence-cased display text, and the transform would mangle
           any future label with an internal capital. */}
       <span className="block whitespace-nowrap">
-        {AUDIT_STATUS_LABELS[status]}
+        {t(`audit:status.${status}`, {
+          defaultValue: AUDIT_STATUS_LABELS[status],
+        })}
       </span>
     </Badge>
   );

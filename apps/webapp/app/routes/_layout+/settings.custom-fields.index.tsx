@@ -8,6 +8,7 @@
  * @see {@link file://../../modules/custom-field/service.server.ts}
  */
 import type { Prisma } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import { data, Link, useLoaderData } from "react-router";
 import { CategoryBadge } from "~/components/assets/category-badge";
@@ -21,6 +22,8 @@ import { Button } from "~/components/shared/button";
 import { GrayBadge } from "~/components/shared/gray-badge";
 import { Td, Th } from "~/components/table";
 import { useUserRoleHelper } from "~/hooks/user-user-role-helper";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import {
   countActiveCustomFields,
   getFilteredAndPaginatedCustomFields,
@@ -91,7 +94,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     const totalPages = Math.ceil(totalCustomFields / perPage);
 
     const header: HeaderData = {
-      title: "Custom Fields",
+      title: createI18n(await resolveRequestLanguage({ request })).t(
+        "settings:customFields"
+      ),
     };
     const modelName = {
       singular: "custom fields",
@@ -125,29 +130,29 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
 /** The custom fields list, with its create button and bulk actions. */
 export default function CustomFieldsIndexPage() {
+  const { t } = useTranslation();
   const { canCreateMoreCustomFields } = useLoaderData<typeof loader>();
   const { isBaseOrSelfService } = useUserRoleHelper();
 
   return (
     <>
       <div className="mb-2.5 flex items-center justify-between bg-white md:rounded md:border md:border-gray-200 md:px-6 md:py-5">
-        <h2 className=" text-lg text-gray-900">Custom Fields</h2>
+        <h2 className=" text-lg text-gray-900">{t("settings:customFields")}</h2>
         <Button
           to="new"
           role="link"
-          aria-label="new custom field"
+          aria-label={t("settings:newCustomField")}
           data-test-id="createNewCustomField"
           variant="primary"
           disabled={
             !canCreateMoreCustomFields
               ? {
-                  reason:
-                    "You are not able to create more active custom fields within your current plan.",
+                  reason: t("settings:customFieldLimit"),
                 }
               : false
           }
         >
-          New custom field
+          {t("settings:newCustomField")}
         </Button>
       </div>
       <List
@@ -155,11 +160,11 @@ export default function CustomFieldsIndexPage() {
         ItemComponent={CustomFieldRow}
         headerChildren={
           <>
-            <Th>Categories</Th>
-            <Th>Required</Th>
-            <Th>Status</Th>
-            <Th>Used on</Th>
-            <Th>Actions</Th>
+            <Th>{t("settings:categories")}</Th>
+            <Th>{t("settings:required")}</Th>
+            <Th>{t("settings:status")}</Th>
+            <Th>{t("settings:usedOn")}</Th>
+            <Th>{t("settings:actions")}</Th>
           </>
         }
       />
@@ -173,6 +178,7 @@ function CustomFieldRow({
     usageCount: number;
   };
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <Td className="w-full">
@@ -193,7 +199,7 @@ function CustomFieldRow({
       <Td>
         <ItemsWithViewMore
           items={item.categories}
-          emptyMessage={<GrayBadge>All</GrayBadge>}
+          emptyMessage={<GrayBadge>{t("settings:all")}</GrayBadge>}
           renderItem={(category) => (
             <CategoryBadge
               category={category}
@@ -205,23 +211,23 @@ function CustomFieldRow({
       </Td>
       <Td>
         <span className="text-text-sm font-medium capitalize text-gray-600">
-          {item.required ? "Yes" : "No"}
+          {item.required ? t("settings:yes") : t("settings:no")}
         </span>
       </Td>
       <Td>
         {!item.active ? (
           <Badge color="#dc2626" withDot={false}>
-            Inactive
+            {t("settings:inactive")}
           </Badge>
         ) : (
           <Badge color="#059669" withDot={false}>
-            Active
+            {t("settings:active")}
           </Badge>
         )}
       </Td>
       <Td>
         <span className="text-text-sm font-medium text-gray-600">
-          {item.usageCount === 1 ? "1 asset" : `${item.usageCount} assets`}
+          {t("settings:asset", { count: item.usageCount })}
         </span>
       </Td>
       <Td>

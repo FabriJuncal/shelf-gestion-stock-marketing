@@ -76,6 +76,9 @@ model User {
   timeFormat TimeFormatPreference? // null → not yet detected
   weekStart  WeekStartPreference?  // null → not yet detected
   timeZone   String?               // IANA name; null → not yet detected
+  // Interface language. Nullable keeps existing users compatible and lets the
+  // request resolver fall back to their browser until they make a choice.
+  language   AppLanguage?
 
   // Relationships
   assets             Asset[]
@@ -1086,6 +1089,11 @@ enum WeekStartPreference {
   MONDAY
   SUNDAY
   SATURDAY
+}
+
+enum AppLanguage {
+  en
+  es
 }
 
 enum OrganizationRoles {

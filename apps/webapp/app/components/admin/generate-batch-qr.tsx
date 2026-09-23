@@ -1,11 +1,13 @@
 import type { ChangeEvent } from "react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigation } from "react-router";
 import { isFormProcessing } from "~/utils/form";
 import Input from "../forms/input";
 import { Button } from "../shared/button";
 
 export const GenerateBatchQr = () => {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState<number>(1000);
   const [batchName, setBatchName] = useState<string>("");
   const navigation = useNavigation();
@@ -22,14 +24,14 @@ export const GenerateBatchQr = () => {
   }
   return (
     <div className="flex w-[400px] flex-col gap-2 bg-gray-200 p-4">
-      <h3>Generate Batch</h3>
+      <h3>{t("audit:generateBatch")}</h3>
       <Input
         type="name"
         value={batchName}
         onChange={(e) => setBatchName(e.target.value)}
         placeholder="Dank batch"
         disabled={disabled}
-        label={"Batch name"}
+        label={t("audit:batchName")}
       />
       <Input
         type="number"
@@ -37,9 +39,9 @@ export const GenerateBatchQr = () => {
         max={1000}
         value={amount}
         onChange={handleChange}
-        placeholder="Amount"
+        placeholder={t("audit:amount")}
         disabled={disabled}
-        label="Amount"
+        label={t("audit:amount")}
       />
       <div>
         <Button
@@ -54,7 +56,7 @@ export const GenerateBatchQr = () => {
           value="createOrphans"
           disabled={disabled}
         >
-          Generate & Download batch
+          {t("audit:generateDownloadBatch")}
         </Button>
         <p className="mt-2 text-sm text-gray-500">
           Generates and downloads a batch of unclaimed qr codes. Min 1, Max 1000

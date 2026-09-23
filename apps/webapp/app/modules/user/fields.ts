@@ -22,6 +22,7 @@ export const USER_WITH_SSO_DETAILS_SELECT = {
   firstName: true,
   lastName: true,
   displayName: true,
+  language: true,
   sso: true,
   userOrganizations: {
     select: {

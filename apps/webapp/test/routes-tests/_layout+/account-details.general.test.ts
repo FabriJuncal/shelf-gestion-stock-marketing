@@ -13,6 +13,7 @@ import { createActionArgs } from "@mocks/remix";
 import * as userService from "~/modules/user/service.server";
 import * as rolesServer from "~/utils/roles.server";
 import { sendEmail } from "~/emails/mail.server";
+import { reconcileLanguageWithSupabase } from "~/i18n/language-sync.server";
 
 import { action } from "~/routes/_layout+/account-details.general";
 
@@ -47,6 +48,12 @@ vi.mock("~/utils/emitter/send-notification.server", () => ({
 // the recipient assertions are made against.
 vi.mock("~/emails/mail.server", () => ({
   sendEmail: vi.fn(),
+}));
+
+// why: verify the action's partial-success response without mutating remote
+// Supabase Auth metadata.
+vi.mock("~/i18n/language-sync.server", () => ({
+  reconcileLanguageWithSupabase: vi.fn(),
 }));
 
 describe("account-details.general action — updateFormatPrefs", () => {
@@ -87,6 +94,43 @@ describe("account-details.general action — updateFormatPrefs", () => {
       weekStart: "MONDAY",
       timeZone: "Europe/London",
     });
+  });
+});
+
+describe("account-details.general action — updateLanguage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(rolesServer.requirePermission).mockResolvedValue({} as never);
+    vi.mocked(reconcileLanguageWithSupabase).mockResolvedValue("pending");
+  });
+
+  it("preserves the local preference and warning when Auth sync is pending", async () => {
+    const request = new Request("http://localhost/account-details/general", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        intent: "updateLanguage",
+        type: "updateFormatPrefs",
+        language: "es",
+      }),
+    });
+    const context = {
+      getSession: () => ({ userId: "user-1", email: "u@example.com" }),
+    };
+
+    const response = await action(
+      createActionArgs({ request, context: context as never })
+    );
+
+    expect(userService.updateUser).toHaveBeenCalledWith({
+      id: "user-1",
+      language: "es",
+    });
+    expect(reconcileLanguageWithSupabase).toHaveBeenCalledWith("user-1", "es");
+    expect(response).toMatchObject({
+      data: { success: true, languageSyncPending: true },
+    });
+    expect((response as { init: ResponseInit }).init.headers).toBeDefined();
   });
 });
 

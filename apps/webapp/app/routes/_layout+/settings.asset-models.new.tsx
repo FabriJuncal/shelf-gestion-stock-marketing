@@ -11,6 +11,8 @@ import { data, redirect } from "react-router";
 import AssetModelForm, {
   AssetModelFormSchema,
 } from "~/components/asset-model/form";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { getCategoriesForCreateAndEdit } from "~/modules/asset/service.server";
 import {
   createAssetModel,
@@ -27,8 +29,6 @@ import {
   PermissionEntity,
 } from "~/utils/permissions/permission.data";
 import { requirePermission } from "~/utils/roles.server";
-
-const title = "New asset model";
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const authSession = context.getSession();
@@ -49,7 +49,11 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
       }
     );
 
-    const header = { title };
+    const header = {
+      title: createI18n(await resolveRequestLanguage({ request })).t(
+        "inventory:newAssetModel"
+      ),
+    };
 
     return payload({
       header,

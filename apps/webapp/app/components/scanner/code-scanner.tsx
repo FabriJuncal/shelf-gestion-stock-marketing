@@ -10,6 +10,7 @@ import {
   QrCode,
   ScanQrCode,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import Webcam from "react-webcam";
 import { ClientOnly } from "remix-utils/client-only";
@@ -173,6 +174,7 @@ export const CodeScanner = ({
   overlayPosition = "fullscreen",
   savedCameraId,
 }: CodeScannerProps) => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const { isMd } = useViewportHeight();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -368,7 +370,7 @@ export const CodeScanner = ({
                     <ErrorIcon />
                   </span>
                   <h5 className="mb-2">
-                    {errorTitle || "Unsupported Barcode detected"}
+                    {errorTitle || t("scanner:unsupportedBarcode")}
                   </h5>
                   <p className="mb-4 max-w-[300px] text-red-600">
                     {errorMessage}
@@ -379,22 +381,22 @@ export const CodeScanner = ({
                     variant="secondary"
                     className="mt-2"
                   >
-                    Scan again
+                    {t("scanner:scanAgain")}
                   </Button>
                 </>
               ) : (
                 <>
-                  <h5>Code detected</h5>
+                  <h5>{t("scanner:codeDetected")}</h5>
 
                   {typeof scanMessage === "string" ? (
                     <>
                       <ClientOnly fallback={null}>
                         {() => <SuccessAnimation />}
                       </ClientOnly>
-                      <p>{scanMessage || "Scanner paused"}</p>
+                      <p>{scanMessage || t("scanner:scannerPaused")}</p>
                     </>
                   ) : (
-                    scanMessage || <p>Scanner paused</p>
+                    scanMessage || <p>{t("scanner:scannerPaused")}</p>
                   )}
                 </>
               )}
@@ -426,6 +428,7 @@ function ScannerMode({
   callback?: (input: HTMLInputElement, paused: boolean) => void;
   action?: ActionType;
 }) {
+  const { t } = useTranslation();
   const [inputIsFocused, setInputIsFocused] = useState(false);
   const [inputValue, setInputValue] = useState("");
   // Focus the scanner input on mount so users can start scanning immediately.
@@ -495,10 +498,10 @@ function ScannerMode({
           name="code"
           label={
             paused
-              ? "Scanner paused"
+              ? t("scanner:scannerPaused")
               : inputIsFocused
-              ? "Waiting for scan..."
-              : "Please click on the text field before scanning"
+              ? t("scanner:waitingForScan")
+              : t("scanner:clickFieldToScan")
           }
           icon={inputIsFocused ? "qr-code" : "mouse-pointer-click"}
           iconClassName={tw(
@@ -612,6 +615,7 @@ function CameraMode({
   /** Saved camera ID from user preferences - used for initial constraint */
   savedCameraId?: string;
 }) {
+  const { t } = useTranslation();
   const videoRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrame = useRef<number>(0);
@@ -832,13 +836,13 @@ function CameraMode({
             <Camera className="size-12 text-white/50" />
           </div>
           <p className="mb-4">{error}</p>
-          <p className="mb-4">If the issue persists, please contact support.</p>
+          <p className="mb-4">{t("scanner:cameraPermissionHelp")}</p>
           <Button
             type="button"
             onClick={() => window.location.reload()}
             variant="secondary"
           >
-            Reload Page
+            {t("scanner:reloadPage")}
           </Button>
         </InfoOverlay>
       )}
@@ -855,7 +859,7 @@ function CameraMode({
 
           /** Error when there is no video element.  */
           if (!video || !canvas) {
-            setError("Canvas or video element not found");
+            setError(t("scanner:cameraOrVideoMissing"));
             setIsLoading(false);
             return;
           }

@@ -1,4 +1,5 @@
 import { TagUseFor } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import { data, redirect, useActionData, useLoaderData } from "react-router";
 import { useZorm } from "react-zorm";
@@ -117,6 +118,7 @@ export async function action({ context, request }: LoaderFunctionArgs) {
 }
 
 export default function NewTag() {
+  const { t } = useTranslation();
   // Focus the Name input on mount of the new-tag page.
   const nameInputRef = useAutoFocus<HTMLInputElement>();
   const zo = useZorm("NewQuestionWizardScreen", NewTagFormSchema);
@@ -136,8 +138,8 @@ export default function NewTag() {
           <div className="gap-3 lg:flex lg:items-end">
             <Input
               ref={nameInputRef}
-              label="Name"
-              placeholder="Tag name"
+              label={t("inventory:name")}
+              placeholder={t("inventory:tagName")}
               className="mb-4 lg:mb-0 lg:max-w-[180px]"
               name={zo.fields.name()}
               disabled={disabled}
@@ -146,8 +148,8 @@ export default function NewTag() {
               required={zodFieldIsRequired(NewTagFormSchema.shape.name)}
             />
             <Input
-              label="Description"
-              placeholder="Description (optional)"
+              label={t("inventory:description")}
+              placeholder={t("inventory:optionalDescription")}
               name={zo.fields.description()}
               disabled={disabled}
               data-test-id="tagDescription"
@@ -169,12 +171,11 @@ export default function NewTag() {
               items={tagUseFor}
               labelKey="label"
               valueKey="value"
-              label="Use for"
-              placeholder="Select use for"
+              label={t("inventory:useFor")}
+              placeholder={t("inventory:selectUseFor")}
               tooltip={{
-                title: "Use for",
-                content:
-                  "When no specific entry is selected, this tag will be available for all entries.",
+                title: t("inventory:useFor"),
+                content: t("inventory:useForHelp"),
               }}
             />
           </div>
@@ -186,10 +187,10 @@ export default function NewTag() {
               size="sm"
               disabled={disabled}
             >
-              Cancel
+              {t("common:cancel")}
             </Button>
             <Button type="submit" size="sm" disabled={disabled}>
-              Create
+              {t("inventory:create")}
             </Button>
           </div>
         </div>

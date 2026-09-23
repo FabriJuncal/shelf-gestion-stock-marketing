@@ -12,7 +12,9 @@
  */
 import type { ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { I18nextProvider } from "react-i18next";
 import { describe, expect, it, vi } from "vitest";
+import { createI18n } from "~/i18n/i18n";
 import { ManagePlacementsForm } from "./manage-placements-form";
 
 // why: the form renders the repo's `Form` (a react-router `<Form>` wrapper)
@@ -49,9 +51,15 @@ const locations = [
   { id: "loc-2", name: "Erbil Store" },
 ];
 
+function renderWithI18n(ui: ReactNode) {
+  return render(
+    <I18nextProvider i18n={createI18n("en")}>{ui}</I18nextProvider>
+  );
+}
+
 describe("ManagePlacementsForm — over-placed state", () => {
   it("shows the unplaced residual normally when placements fit", () => {
-    render(
+    renderWithI18n(
       <ManagePlacementsForm
         isQty
         assetQuantity={100}
@@ -71,7 +79,7 @@ describe("ManagePlacementsForm — over-placed state", () => {
 
   it("reports the overshoot as Over-placed instead of a clamped zero", () => {
     // 87 placed against a total that consumption dropped to 82.
-    render(
+    renderWithI18n(
       <ManagePlacementsForm
         isQty
         assetQuantity={82}
@@ -98,7 +106,7 @@ describe("ManagePlacementsForm — over-placed state", () => {
     // deleting valid manual placements to "make room" for the kit slice.
     // The kit slice also must not eat the manual pool: 20 units are still
     // free to place.
-    render(
+    renderWithI18n(
       <ManagePlacementsForm
         isQty
         assetQuantity={100}
@@ -134,7 +142,7 @@ describe("ManagePlacementsForm — over-placed state", () => {
   });
 
   it("explains an app-created over-allocation rather than blaming the user's input", () => {
-    render(
+    renderWithI18n(
       <ManagePlacementsForm
         isQty
         assetQuantity={82}
@@ -160,7 +168,7 @@ describe("ManagePlacementsForm — over-placed state", () => {
   it("still uses the input-error wording when the user's own edit overshoots", () => {
     // Opened valid (50 of 100), so anything over the line from here is the
     // user's own edit and should read as ordinary validation.
-    render(
+    renderWithI18n(
       <ManagePlacementsForm
         isQty
         assetQuantity={100}

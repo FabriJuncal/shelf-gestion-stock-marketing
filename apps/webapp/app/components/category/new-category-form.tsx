@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import type { Category } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import { useZorm } from "react-zorm";
 import z from "zod";
 import { useAutoFocus } from "~/hooks/use-auto-focus";
@@ -42,6 +43,7 @@ export default function NewCategoryForm({
   onCancel,
   onSuccess,
 }: NewCategoryFormProps) {
+  const { t } = useTranslation();
   const zo = useZorm("NewQuestionWizardScreen", NewCategoryFormSchema);
   const fetcher = useFetcherWithReset<typeof action>();
   const disabled = useDisabled(fetcher);
@@ -96,8 +98,8 @@ export default function NewCategoryForm({
       <div className={tw("gap-4 md:flex md:items-center", className)}>
         <Input
           ref={nameInputRef}
-          label="Name"
-          placeholder="Category name"
+          label={t("inventory:name")}
+          placeholder={t("inventory:categoryName")}
           className={tw("mb-4 lg:mb-0 lg:max-w-[180px]", inputClassName)}
           name={zo.fields.name()}
           disabled={disabled}
@@ -107,8 +109,8 @@ export default function NewCategoryForm({
           required={zodFieldIsRequired(NewCategoryFormSchema.shape.name)}
         />
         <Input
-          label="Description"
-          placeholder="Description (optional)"
+          label={t("inventory:description")}
+          placeholder={t("inventory:optionalDescription")}
           name={zo.fields.description()}
           disabled={disabled}
           data-test-id="categoryDescription"
@@ -144,7 +146,7 @@ export default function NewCategoryForm({
               className="flex-1"
               disabled={disabled}
             >
-              Cancel
+              {t("common:cancel")}
             </Button>
           ) : (
             <Button
@@ -154,7 +156,7 @@ export default function NewCategoryForm({
               className="flex-1"
               disabled={disabled}
             >
-              Cancel
+              {t("common:cancel")}
             </Button>
           )}
           <Button
@@ -163,7 +165,7 @@ export default function NewCategoryForm({
             className="flex-1"
             disabled={disabled}
           >
-            {disabled ? "Creating..." : "Create"}
+            {disabled ? t("inventory:creating") : t("inventory:create")}
           </Button>
         </div>
 

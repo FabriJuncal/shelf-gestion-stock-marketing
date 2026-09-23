@@ -8,31 +8,32 @@
  * @see {@link file://./date-format-select.tsx}
  */
 import { render, screen } from "@testing-library/react";
+import { I18nextProvider } from "react-i18next";
 import { describe, it, expect, vi } from "vitest";
+import { createI18n } from "~/i18n/i18n";
 import { DateFormatSelect } from "./date-format-select";
 
-describe("DateFormatSelect", () => {
-  it("renders the label for the current value", () => {
-    render(
+function renderSelect(value: "DD_MM_YYYY" | "YYYY_MM_DD") {
+  return render(
+    <I18nextProvider i18n={createI18n("en")}>
       <DateFormatSelect
         name="dateFormat"
-        value="YYYY_MM_DD"
+        value={value}
         // why: these tests verify render + hidden-input submission only; onChange is stubbed, not exercised
         onChange={vi.fn()}
       />
-    );
+    </I18nextProvider>
+  );
+}
+
+describe("DateFormatSelect", () => {
+  it("renders the label for the current value", () => {
+    renderSelect("YYYY_MM_DD");
     expect(screen.getByText("Year / Month / Day")).toBeTruthy();
   });
 
   it("submits the current value via a hidden input", () => {
-    const { container } = render(
-      <DateFormatSelect
-        name="dateFormat"
-        value="DD_MM_YYYY"
-        // why: these tests verify render + hidden-input submission only; onChange is stubbed, not exercised
-        onChange={vi.fn()}
-      />
-    );
+    const { container } = renderSelect("DD_MM_YYYY");
     const hidden = container.querySelector<HTMLInputElement>(
       'input[type="hidden"][name="dateFormat"]'
     );

@@ -33,6 +33,9 @@ import {
 } from "~/emails/change-user-email-address";
 
 import { sendEmail } from "~/emails/mail.server";
+import { createI18n } from "~/i18n/i18n";
+import { reconcileLanguageWithSupabase } from "~/i18n/language-sync.server";
+import { languageCookie } from "~/i18n/language.server";
 import { getSupabaseAdmin } from "~/integrations/supabase/client";
 import { refreshAccessToken } from "~/modules/auth/service.server";
 import {
@@ -70,6 +73,7 @@ const IntentSchema = z.object({
     "verifyEmailChange",
     "updateUserContact",
     "updateFormatPrefs",
+    "updateLanguage",
   ]),
 });
 
@@ -89,6 +93,13 @@ const ActionSchemas = {
 
   updateFormatPrefs: FormatPrefsFormSchema.extend({
     type: z.literal("updateFormatPrefs"),
+  }),
+
+  updateLanguage: z.object({
+    // The surrounding language/region form keeps its established hidden type
+    // value for format preferences; the action intent is the discriminator.
+    type: z.literal("updateFormatPrefs"),
+    language: z.enum(["en", "es"]),
   }),
 
   updateUserContact: UserContactDetailsFormSchema.extend({
@@ -231,12 +242,17 @@ export async function action({ context, request }: ActionFunctionArgs) {
         if (parsedData.type !== "updateFormatPrefs")
           throw new Error("Invalid payload type");
 
+        const formatPrefs = parseData(
+          await request.clone().formData(),
+          FormatPrefsFormSchema
+        );
+
         await updateUser({
           id: userId,
-          dateFormat: parsedData.dateFormat,
-          timeFormat: parsedData.timeFormat,
-          weekStart: parsedData.weekStart,
-          timeZone: parsedData.timeZone,
+          dateFormat: formatPrefs.dateFormat,
+          timeFormat: formatPrefs.timeFormat,
+          weekStart: formatPrefs.weekStart,
+          timeZone: formatPrefs.timeZone,
         });
 
         sendNotification({
@@ -248,6 +264,41 @@ export async function action({ context, request }: ActionFunctionArgs) {
         });
 
         return payload({ success: true });
+      }
+      case "updateLanguage": {
+        if (parsedData.type !== "updateFormatPrefs")
+          throw new Error("Invalid payload type");
+
+        const languageData = parseData(
+          await request.clone().formData(),
+          z.object({ language: z.enum(["en", "es"]) })
+        );
+
+        const i18n = createI18n(languageData.language);
+        await updateUser({ id: userId, language: languageData.language });
+        const headers = new Headers({
+          "Set-Cookie": await languageCookie.serialize(languageData.language),
+        });
+
+        const languageSyncStatus = await reconcileLanguageWithSupabase(
+          userId,
+          languageData.language
+        );
+
+        if (languageSyncStatus === "pending") {
+          return data(payload({ success: true, languageSyncPending: true }), {
+            headers,
+          });
+        }
+
+        sendNotification({
+          title: i18n.t("common:preferencesUpdated"),
+          message: i18n.t("common:languageUpdated"),
+          icon: { name: "success", variant: "success" },
+          senderId: authSession.userId,
+        });
+
+        return data(payload({ success: true }), { headers });
       }
       case "updateUserContact": {
         if (parsedData.type !== "updateUserContact")

@@ -2,13 +2,13 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { m } from "framer-motion";
 import { Package } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useFetcher, useFetchers, useLoaderData } from "react-router";
 import { List, type ListProps } from "~/components/list";
 import { ListContentWrapper } from "~/components/list/content-wrapper";
 import { LocationBadge } from "~/components/location/location-badge";
 import { Button } from "~/components/shared/button";
 import { EmptyTableValue } from "~/components/shared/empty-table-value";
-import { GrayBadge } from "~/components/shared/gray-badge";
 import { InfoTooltip } from "~/components/shared/info-tooltip";
 import { Spinner } from "~/components/shared/spinner";
 import {
@@ -60,6 +60,7 @@ export const AssetsList = ({
   disableBulkActions?: boolean;
   wrapperClassName?: string;
 }) => {
+  const { t } = useTranslation();
   const { items } = useLoaderData<AssetIndexLoaderData>();
   // We use the hook because it handles optimistic UI
   const { modeIsSimple } = useAssetIndexViewState();
@@ -85,30 +86,25 @@ export const AssetsList = ({
   const isSwappingMode = modeFetcher?.formData;
   const headerChildren = modeIsSimple ? (
     <>
-      <Th>Category</Th>
-      <Th>Tags</Th>
+      <Th>{t("inventory:category")}</Th>
+      <Th>{t("inventory:tags")}</Th>
       <When truthy={!isUserPage}>
         <Th className="flex items-center gap-1 whitespace-nowrap">
-          Custodian{" "}
+          {t("inventory:custodian")}{" "}
           <InfoTooltip
             iconClassName="size-4"
             content={
               <>
-                <h6>Asset custody</h6>
-                <p>
-                  This column shows if a user has custody of the asset either
-                  via direct assignment or via a booking. If you see{" "}
-                  <GrayBadge>private</GrayBadge> that means you don't have the
-                  permissions to see who has custody of the asset.
-                </p>
+                <h6>{t("inventory:assetCustody")}</h6>
+                <p>{t("inventory:assetCustodyHelp")}</p>
               </>
             }
           />
         </Th>
       </When>
-      <Th>Location</Th>
-      <Th>Quantity</Th>
-      <Th>Actions</Th>
+      <Th>{t("inventory:location")}</Th>
+      <Th>{t("inventory:quantity")}</Th>
+      <Th>{t("inventory:actions")}</Th>
     </>
   ) : (
     <AdvancedTableHeader columns={columns} />
@@ -133,7 +129,7 @@ export const AssetsList = ({
           className="absolute inset-0 z-[100] flex flex-col items-center  bg-gray-25/95 pt-[30vh]"
         >
           <Spinner />
-          <p className="mt-2">Changing mode...</p>
+          <p className="mt-2">{t("inventory:changingMode")}</p>
         </m.div>
       </When>
 
@@ -176,7 +172,9 @@ export const AssetsList = ({
                           assetModel:
                             resource.extendedProps?.assetModel ?? null,
                         }}
-                        alt={`Image of ${resource.title}`}
+                        alt={t("inventory:imageOfAsset", {
+                          asset: resource.title,
+                        })}
                         className="size-14 shrink-0 rounded border object-cover"
                         withPreview
                       />
@@ -210,7 +208,7 @@ export const AssetsList = ({
             </>
           ) : (
             <List
-              title="Assets"
+              title={t("inventory:assets")}
               ItemComponent={modeIsSimple ? ListAssetContent : AdvancedAssetRow}
               customPagination={<AssetIndexPagination />}
               bulkActions={
@@ -242,6 +240,7 @@ export const ListAssetContent = ({
   bulkActions?: ReactNode;
   isUserPage?: boolean;
 }) => {
+  const { t } = useTranslation();
   const { category, tags, custody: custodyArray } = item;
   // Render only the single primary-location badge in the list column —
   // a qty-tracked asset can sit at multiple locations via AssetLocation.
@@ -280,7 +279,7 @@ export const ListAssetContent = ({
                   mainImageExpiration: item.mainImageExpiration,
                   assetModel: item.assetModel ?? null,
                 }}
-                alt={`Image of ${item.title}`}
+                alt={t("inventory:imageOfAsset", { asset: item.title })}
                 className="size-full rounded-[4px] border object-cover"
                 withPreview
               />

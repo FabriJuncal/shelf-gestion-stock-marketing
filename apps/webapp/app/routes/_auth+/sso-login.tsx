@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -17,11 +19,14 @@ import { Button } from "~/components/shared/button";
 import { config } from "~/config/shelf.config";
 import { useSearchParams } from "~/hooks/search-params";
 import { useAutoFocus } from "~/hooks/use-auto-focus";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
+import { localizeAuthError } from "~/modules/auth/localize-error.server";
 import { signInWithSSO } from "~/modules/auth/service.server";
 import { appendToMetaTitle } from "~/utils/append-to-meta-title";
 import { mobilePkceChallengeCookie } from "~/utils/cookies.server";
 import { DEFAULT_SSO_DOMAIN } from "~/utils/env";
-import { makeShelfError, notAllowedMethod, ShelfError } from "~/utils/error";
+import { notAllowedMethod, ShelfError } from "~/utils/error";
 import { isFormProcessing } from "~/utils/form";
 import {
   payload,
@@ -31,22 +36,25 @@ import {
 } from "~/utils/http.server";
 import { isValidDomain } from "~/utils/misc";
 
-const SSOLoginFormSchema = z.object({
-  domain: z
-    .string()
-    .transform((email) => email.toLowerCase())
-    .refine(isValidDomain, () => ({
-      message: "Please enter a valid domain name",
-    })),
-  redirectTo: z.string().optional(),
-  // "mobile" routes the post-auth redirect to the native-app callback so the
-  // companion app can complete SSO login (see signInWithSSO).
-  platform: z.enum(["web", "mobile"]).optional(),
-});
+function createSsoLoginFormSchema(t: (key: string) => string) {
+  return z.object({
+    domain: z
+      .string()
+      .transform((email) => email.toLowerCase())
+      .refine(isValidDomain, () => ({
+        message: t("auth:invalidDomain"),
+      })),
+    redirectTo: z.string().optional(),
+    // "mobile" routes the post-auth redirect to the native-app callback so the
+    // companion app can complete SSO login (see signInWithSSO).
+    platform: z.enum(["web", "mobile"]).optional(),
+  });
+}
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
-  const title = "Log in with SSO";
-  const subHeading = "Enter your company's domain to login with SSO.";
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
+  const title = i18n.t("auth:ssoTitle");
+  const subHeading = i18n.t("auth:ssoHelp");
   const { disableSSO } = config;
 
   const url = new URL(request.url);
@@ -64,9 +72,8 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     if (disableSSO) {
       throw new ShelfError({
         cause: null,
-        title: "SSO is disabled",
-        message:
-          "For more information, please contact your workspace administrator.",
+        title: i18n.t("auth:ssoDisabled"),
+        message: i18n.t("auth:contactWorkspaceAdmin"),
         label: "User onboarding",
         status: 403,
         shouldBeCaptured: false,
@@ -90,9 +97,8 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     if (isMobile && !validChallenge) {
       throw new ShelfError({
         cause: null,
-        title: "Sign-in not supported",
-        message:
-          "This version of the Shelf app can't sign in with SSO. Please update the app and try again.",
+        title: i18n.t("auth:signInNotSupported"),
+        message: i18n.t("auth:updateAppForSso"),
         label: "Auth",
         status: 400,
         shouldBeCaptured: false,
@@ -119,12 +125,13 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
     return payload({ title, subHeading });
   } catch (cause) {
-    const reason = makeShelfError(cause);
+    const reason = localizeAuthError(cause, (key) => i18n.t(key));
     throw data(error(reason), { status: reason.status });
   }
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
   try {
     const method = getActionMethod(request);
 
@@ -132,7 +139,7 @@ export async function action({ request }: ActionFunctionArgs) {
       case "POST": {
         const { domain, platform } = parseData(
           await request.formData(),
-          SSOLoginFormSchema,
+          createSsoLoginFormSchema((key) => i18n.t(key)),
           { shouldBeCaptured: false }
         );
         const url = await signInWithSSO(domain, { platform });
@@ -143,7 +150,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
     throw notAllowedMethod(method);
   } catch (cause) {
-    const reason = makeShelfError(cause);
+    const reason = localizeAuthError(cause, (key) => i18n.t(key));
     return data(error(reason), { status: reason.status });
   }
 }
@@ -153,7 +160,9 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 ];
 
 export default function SSOLogin() {
-  const zo = useZorm("NewQuestionWizardScreen", SSOLoginFormSchema);
+  const { t } = useTranslation();
+  const schema = useMemo(() => createSsoLoginFormSchema((key) => t(key)), [t]);
+  const zo = useZorm("NewQuestionWizardScreen", schema);
   const navigation = useNavigation();
   const disabled = isFormProcessing(navigation.state);
   const data = useActionData<typeof action>();
@@ -175,7 +184,7 @@ export default function SSOLogin() {
             <Input
               ref={domainInputRef}
               data-test-id="domain"
-              label="Company domain"
+              label={t("auth:companyDomain")}
               placeholder="yourdomain.com"
               required
               name={zo.fields.domain()}
@@ -192,7 +201,7 @@ export default function SSOLogin() {
               disabled={disabled}
               width="full"
             >
-              Log In
+              {t("auth:login")}
             </Button>
           </div>
         </Form>
@@ -200,13 +209,13 @@ export default function SSOLogin() {
           <div className="text-sm text-error-500">{data.error.message}</div>
         )}
         <div>
-          Want to enable SSO for your organization?{" "}
+          {t("auth:enableSso")}{" "}
           <Button
             as="a"
             href="mailto:hello@shelf.nu?subject=SSO request"
             variant="link"
           >
-            Contact us
+            {t("auth:contactUs")}
           </Button>
         </div>
       </div>

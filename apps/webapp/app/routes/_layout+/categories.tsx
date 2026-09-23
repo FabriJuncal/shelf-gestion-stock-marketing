@@ -1,4 +1,5 @@
 import type { Category } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -149,6 +150,7 @@ export const handle = {
 export const ErrorBoundary = () => <ErrorContent />;
 
 export default function CategoriesPage() {
+  const { t } = useTranslation();
   const { isBaseOrSelfService } = useUserRoleHelper();
 
   return (
@@ -157,10 +159,10 @@ export default function CategoriesPage() {
         <Button
           to="new"
           role="link"
-          aria-label={`new category`}
+          aria-label={t("inventory:newCategory")}
           data-test-id="createNewCategory"
         >
-          New category
+          {t("inventory:newCategory")}
         </Button>
       </Header>
       <ListContentWrapper>
@@ -171,17 +173,17 @@ export default function CategoriesPage() {
             isBaseOrSelfService ? undefined : <BulkActionsDropdown />
           }
           customEmptyStateContent={{
-            title: "No categories yet",
-            text: "Categories help you organize assets by type. Create categories to group and filter your inventory.",
+            title: t("inventory:noCategoriesYet"),
+            text: t("inventory:noCategoriesHelp"),
             newButtonRoute: "/categories/new",
-            newButtonContent: "Create your first category",
+            newButtonContent: t("inventory:createFirstCategory"),
           }}
           ItemComponent={CategoryItem}
           headerChildren={
             <>
-              <Th>Description</Th>
-              <Th>Assets</Th>
-              <Th>Actions</Th>
+              <Th>{t("inventory:description")}</Th>
+              <Th>{t("inventory:assets")}</Th>
+              <Th>{t("inventory:actions")}</Th>
             </>
           }
         />
@@ -190,7 +192,7 @@ export default function CategoriesPage() {
   );
 }
 
-const CategoryItem = ({
+function CategoryItem({
   item,
 }: {
   item: Pick<Category, "id" | "description" | "name" | "color"> & {
@@ -198,26 +200,33 @@ const CategoryItem = ({
       assets: number;
     };
   };
-}) => (
-  <>
-    <Td title={`Category: ${item.name}`} className="w-1/4">
-      <Badge color={item.color} withDot={false}>
-        {item.name}
-      </Badge>
-    </Td>
-    <Td className="max-w-62 md:w-3/4">
-      {item.description ? (
-        <LineBreakText
-          className="md:w-3/4"
-          text={item.description}
-          numberOfLines={3}
-          charactersPerLine={60}
-        />
-      ) : null}
-    </Td>
-    <Td>{item._count.assets}</Td>
-    <Td>
-      <CategoryQuickActions category={item} />
-    </Td>
-  </>
-);
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <Td
+        title={t("inventory:categoryLabel", { name: item.name })}
+        className="w-1/4"
+      >
+        <Badge color={item.color} withDot={false}>
+          {item.name}
+        </Badge>
+      </Td>
+      <Td className="max-w-62 md:w-3/4">
+        {item.description ? (
+          <LineBreakText
+            className="md:w-3/4"
+            text={item.description}
+            numberOfLines={3}
+            charactersPerLine={60}
+          />
+        ) : null}
+      </Td>
+      <Td>{item._count.assets}</Td>
+      <Td>
+        <CategoryQuickActions category={item} />
+      </Td>
+    </>
+  );
+}

@@ -19,6 +19,8 @@ import { Td, Th } from "~/components/table";
 import { ImportNrmButton } from "~/components/workspace/import-nrm-button";
 import { TeamMembersActionsDropdown } from "~/components/workspace/nrm-actions-dropdown";
 import { useUserRoleHelper } from "~/hooks/user-user-role-helper";
+import { createI18n } from "~/i18n/i18n";
+import { resolveRequestLanguage } from "~/i18n/language.server";
 import { getPaginatedAndFilterableSettingTeamMembers } from "~/modules/settings/service.server";
 import { getHeldCustodyCount } from "~/modules/team-member/custody-count";
 import { deleteNRM } from "~/modules/team-member/service.server";
@@ -62,7 +64,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     ]);
 
     const header: HeaderData = {
-      title: `Settings - Manage Team Members`,
+      title: createI18n(await resolveRequestLanguage({ request })).t(
+        "settings:manageTeamMembers"
+      ),
     };
 
     const modelName = {

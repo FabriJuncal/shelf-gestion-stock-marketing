@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { AssetModel } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import { useFetcher } from "react-router";
 import { Button } from "~/components/shared/button";
 import {
@@ -24,6 +25,7 @@ export const DeleteAssetModel = ({
   };
   trigger?: ReactNode;
 }) => {
+  const { t } = useTranslation();
   const assetCount = assetModel._count?.assets ?? 0;
   const fetcher = useFetcher();
   const disabled = isFormProcessing(fetcher.state);
@@ -36,7 +38,7 @@ export const DeleteAssetModel = ({
       type="button"
       className="text-[12px]"
       icon={"trash"}
-      title={"Delete"}
+      title={t("inventory:delete")}
     />
   );
 
@@ -50,10 +52,11 @@ export const DeleteAssetModel = ({
           <span className="flex size-12 items-center justify-center rounded-full bg-error-50 p-2 text-error-600">
             <TrashIcon />
           </span>
-          <AlertDialogTitle>Delete {assetModel.name}</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("inventory:delete")} {assetModel.name}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this asset model? This action cannot
-            be undone.
+            {t("inventory:deleteModelConfirmation")}
           </AlertDialogDescription>
           {assetCount > 0 ? (
             <div className="rounded-md border border-warning-200 bg-warning-25 p-3 text-sm text-warning-700">
@@ -66,7 +69,7 @@ export const DeleteAssetModel = ({
         <AlertDialogFooter>
           <AlertDialogCancel asChild>
             <Button type="button" variant="secondary">
-              Cancel
+              {t("common:cancel")}
             </Button>
           </AlertDialogCancel>
           <fetcher.Form method="delete" action="/settings/asset-models">
@@ -76,7 +79,7 @@ export const DeleteAssetModel = ({
               type="submit"
               disabled={disabled}
             >
-              {disabled ? "Deleting..." : "Delete"}
+              {disabled ? t("inventory:deleting") : t("inventory:delete")}
             </Button>
           </fetcher.Form>
         </AlertDialogFooter>

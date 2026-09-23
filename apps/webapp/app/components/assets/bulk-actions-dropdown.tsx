@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAtomValue } from "jotai";
+import { useTranslation } from "react-i18next";
 import { useNavigation } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
 import { selectedBulkItemsAtom } from "~/atoms/list";
@@ -45,13 +46,14 @@ import BulkDownloadQrDialog from "./bulk-download-qr-dialog";
 import Icon from "../icons/icon";
 
 export default function BulkActionsDropdown() {
+  const { t } = useTranslation();
   const isHydrated = useHydrated();
 
   if (!isHydrated) {
     return (
       <Button variant="secondary" to="#" className="font-medium">
         <span className="flex items-center gap-2">
-          Actions <ChevronRight className="chev rotate-90" />
+          {t("inventory:actions")} <ChevronRight className="chev rotate-90" />
         </span>
       </Button>
     );
@@ -67,6 +69,7 @@ export default function BulkActionsDropdown() {
 
 // react-doctor:no-giant-component — deferred for follow-up refactor
 function ConditionalDropdown() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const isLoading = isFormProcessing(navigation.state);
   const [isBulkDownloadQrOpen, setIsBulkDownloadQrOpen] = useState(false);
@@ -205,13 +208,14 @@ function ConditionalDropdown() {
             disabled={
               disabled
                 ? {
-                    reason:
-                      "You must select at least 1 asset to perform an action",
+                    reason: t("inventory:selectAssetForAction"),
                   }
                 : false
             }
           >
-            <span className="flex items-center gap-2">Actions</span>
+            <span className="flex items-center gap-2">
+              {t("inventory:actions")}
+            </span>
           </Button>
         </DropdownMenuTrigger>
 
@@ -223,7 +227,9 @@ function ConditionalDropdown() {
           disabled={disabled}
           type="button"
         >
-          <span className="flex items-center gap-2">Actions</span>
+          <span className="flex items-center gap-2">
+            {t("inventory:actions")}
+          </span>
         </Button>
 
         <MobileDropdownStyles open={open} />
@@ -249,7 +255,7 @@ function ConditionalDropdown() {
                 width="full"
               >
                 <span className="flex items-center gap-2">
-                  <Icon icon="download" /> Download QR Codes
+                  <Icon icon="download" /> {t("inventory:downloadQrCodes")}
                 </span>
               </Button>
             </DropdownMenuItem>
@@ -263,7 +269,7 @@ function ConditionalDropdown() {
               <DropdownMenuItem className="py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
                   type="start-audit"
-                  label="Create audit"
+                  label={t("inventory:createAudit")}
                   onClick={closeMenu}
                   disabled={isLoading}
                 />
@@ -280,7 +286,7 @@ function ConditionalDropdown() {
               <DropdownMenuItem className="border-b py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
                   type="add-to-audit"
-                  label="Add to existing audit"
+                  label={t("inventory:addToExistingAudit")}
                   onClick={closeMenu}
                   disabled={isLoading}
                 />
@@ -297,7 +303,7 @@ function ConditionalDropdown() {
               <DropdownMenuItem className="py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
                   type="release-custody"
-                  label="Release custody"
+                  label={t("inventory:releaseCustody")}
                   onClick={closeMenu}
                   disabled={
                     !allAssetsAreInCustody ||
@@ -305,10 +311,10 @@ function ConditionalDropdown() {
                     disableReleaseCustody
                       ? {
                           reason: someAssetPartOfUnavailableKit
-                            ? "Some of the selected assets have custody assigned via a kit. If you want to change their custody, please update the kit instead."
+                            ? t("inventory:kitCustodyUpdateRequired")
                             : disableReleaseCustody
-                            ? "Self service can only release their own custody."
-                            : "Some of the selected assets are not in custody.",
+                            ? t("inventory:selfServiceReleaseCustody")
+                            : t("inventory:assetsNotInCustody"),
                         }
                       : isLoading
                   }
@@ -317,14 +323,18 @@ function ConditionalDropdown() {
               <DropdownMenuItem className="border-b py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
                   type="assign-custody"
-                  label={isSelfService ? "Take custody" : "Assign custody"}
+                  label={
+                    isSelfService
+                      ? t("inventory:takeCustody")
+                      : t("inventory:assignCustody")
+                  }
                   onClick={closeMenu}
                   disabled={
                     !allAssetsAreAvailable || someAssetPartOfUnavailableKit
                       ? {
                           reason: someAssetPartOfUnavailableKit
-                            ? "Some of the selected assets have custody assigned via a kit. If you want to change their custody, please update the kit instead."
-                            : "Some of the selected assets are not available.",
+                            ? t("inventory:kitCustodyUpdateRequired")
+                            : t("inventory:assetsNotAvailable"),
                         }
                       : isLoading
                   }
@@ -344,7 +354,7 @@ function ConditionalDropdown() {
                   type="tag-add"
                   onClick={closeMenu}
                   disabled={isLoading}
-                  label="Assign tags"
+                  label={t("inventory:assignTags")}
                 />
               </DropdownMenuItem>
               <DropdownMenuItem className="py-1 lg:p-0">
@@ -352,7 +362,7 @@ function ConditionalDropdown() {
                   type="tag-remove"
                   onClick={closeMenu}
                   disabled={isLoading}
-                  label="Remove tags"
+                  label={t("inventory:removeTags")}
                 />
               </DropdownMenuItem>
               <DropdownMenuItem className="border-t py-1 lg:p-0">
@@ -372,7 +382,7 @@ function ConditionalDropdown() {
               <DropdownMenuItem className="py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
                   type="asset-model"
-                  label="Update asset model"
+                  label={t("inventory:updateAssetModel")}
                   onClick={closeMenu}
                   disabled={isLoading}
                 />
@@ -380,21 +390,22 @@ function ConditionalDropdown() {
               <DropdownMenuItem className="py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
                   type="asset-model-remove"
-                  label="Remove from asset model"
+                  label={t("inventory:removeFromAssetModel")}
                   onClick={closeMenu}
                   disabled={isLoading}
                 />
               </DropdownMenuItem>
               <DropdownMenuItem className="border-t py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
-                  label="Add to kit"
+                  label={t("inventory:addToKit")}
                   type="add-to-kit"
                   onClick={closeMenu}
                   disabled={
                     someAssetCheckedOut
                       ? {
-                          reason:
-                            "Some of the selected kits are checked out. Please finish your booking first, before adding them in kit.",
+                          reason: t(
+                            "inventory:checkedOutAssetsCannotUpdateKit"
+                          ),
                         }
                       : isLoading
                   }
@@ -402,7 +413,7 @@ function ConditionalDropdown() {
               </DropdownMenuItem>
               <DropdownMenuItem className=" py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
-                  label="Remove from kit"
+                  label={t("inventory:removeFromKit")}
                   type="remove-from-kit"
                   onClick={closeMenu}
                   disabled={isLoading}
@@ -410,7 +421,7 @@ function ConditionalDropdown() {
               </DropdownMenuItem>
               <DropdownMenuItem className="border-t py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
-                  label="Mark as available"
+                  label={t("inventory:markAvailable")}
                   type="available"
                   onClick={closeMenu}
                   disabled={isLoading}
@@ -418,7 +429,7 @@ function ConditionalDropdown() {
               </DropdownMenuItem>
               <DropdownMenuItem className="border-b py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
-                  label="Mark as unavailable"
+                  label={t("inventory:markUnavailable")}
                   type="unavailable"
                   onClick={closeMenu}
                   disabled={isLoading}
@@ -428,13 +439,12 @@ function ConditionalDropdown() {
               <DropdownMenuItem className="py-1 lg:p-0">
                 <BulkUpdateDialogTrigger
                   type="trash"
-                  label="Delete"
+                  label={t("inventory:delete")}
                   onClick={closeMenu}
                   disabled={
                     someAssetCheckedOut
                       ? {
-                          reason:
-                            "Some of the selected kits are checked out. Please finish your booking first, before deleting them.",
+                          reason: t("inventory:checkedOutAssetsCannotDelete"),
                         }
                       : isLoading
                   }
@@ -449,7 +459,7 @@ function ConditionalDropdown() {
                   width="full"
                   onClick={() => setOpen(false)}
                 >
-                  Close
+                  {t("common:close")}
                 </Button>
               </DropdownMenuItem>
             </When>

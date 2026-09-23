@@ -15,6 +15,7 @@
  * @see {@link file://./language-region-form.tsx}
  */
 import type { DateFormatPreference } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import { EnumPreferenceSelect } from "./enum-preference-select";
 
 /** One selectable date-format option. */
@@ -74,11 +75,17 @@ type DateFormatSelectProps = {
  * @returns The date-format selector control
  */
 export function DateFormatSelect(props: DateFormatSelectProps) {
+  const { t } = useTranslation();
+  const options = OPTIONS.map((option) => ({
+    ...option,
+    label: t(`format:${option.value}.label`),
+    description: t(`format:${option.value}.description`),
+  }));
   return (
     <EnumPreferenceSelect
       {...props}
-      options={OPTIONS}
-      ariaLabel="Date format options"
+      options={options}
+      ariaLabel={t("format:dateOptions")}
     />
   );
 }

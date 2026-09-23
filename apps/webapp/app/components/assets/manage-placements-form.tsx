@@ -25,6 +25,7 @@
  * @see {@link file://./../../modules/asset/service.server.ts} — `replaceAssetPlacements`
  */
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Form } from "~/components/custom-form";
 import { Button } from "~/components/shared/button";
 import { useDisabled } from "~/hooks/use-disabled";
@@ -99,8 +100,9 @@ export function ManagePlacementsForm({
   kitDrivenPlacements,
   serverErrorMessage,
 }: ManagePlacementsFormProps) {
+  const { t } = useTranslation();
   const disabled = useDisabled();
-  const unit = unitOfMeasure || "units";
+  const unit = unitOfMeasure || t("inventory:units");
   const totalPool = assetQuantity ?? 1;
   const kitDriven = kitDrivenPlacements ?? [];
   const kitDrivenSum = kitDriven.reduce((s, p) => s + p.quantity, 0);
@@ -191,12 +193,12 @@ export function ManagePlacementsForm({
     for (const r of rows) {
       if (!r.locationId) continue;
       if (seen.has(r.locationId)) {
-        return "Each location can appear at most once. Remove the duplicate row.";
+        return t("inventory:duplicatePlacementLocation");
       }
       seen.add(r.locationId);
     }
     return null;
-  }, [isQty, placedSum, totalPool, rows, openedOverPlaced, unit]);
+  }, [isQty, placedSum, totalPool, rows, openedOverPlaced, unit, t]);
 
   /**
    * Free pool on the MANUAL axis. Kit-driven rows are NOT subtracted: they
@@ -269,7 +271,7 @@ export function ManagePlacementsForm({
       {kitDriven.length > 0 ? (
         <div className="mb-4 space-y-2">
           <p className="text-xs font-medium text-gray-500">
-            Placements managed by kits (read-only)
+            {t("inventory:kitManagedPlacements")}
           </p>
           {kitDriven.map((p) => (
             <div
@@ -280,7 +282,7 @@ export function ManagePlacementsForm({
               <div className="flex min-w-0 items-center gap-2">
                 <span className="truncate text-gray-700">{p.locationName}</span>
                 <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                  via kit {p.kit.name}
+                  {t("inventory:viaKit", { kit: p.kit.name })}
                 </span>
               </div>
               {isQty ? (
@@ -305,9 +307,9 @@ export function ManagePlacementsForm({
               onChange={(e) => updateLocation(row.rowId, e.target.value)}
               disabled={disabled}
               className="h-9 min-w-0 flex-1 rounded-md border border-gray-300 px-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              aria-label={`Location for placement ${idx + 1}`}
+              aria-label={t("inventory:placementLocation", { count: idx + 1 })}
             >
-              <option value="">— Select a location —</option>
+              <option value="">{t("inventory:selectLocation")}</option>
               {availableLocations(row.locationId).map((loc) => (
                 <option key={loc.id} value={loc.id}>
                   {loc.name}
@@ -327,7 +329,9 @@ export function ManagePlacementsForm({
                   }
                   disabled={disabled}
                   className="h-9 w-20 rounded-md border border-gray-300 px-2 text-center text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  aria-label={`Quantity for placement ${idx + 1}`}
+                  aria-label={t("inventory:placementQuantity", {
+                    count: idx + 1,
+                  })}
                 />
                 <span className="text-xs text-gray-400">{unit}</span>
               </div>
@@ -338,7 +342,7 @@ export function ManagePlacementsForm({
               className="shrink-0"
               onClick={() => removeRow(row.rowId)}
               disabled={disabled}
-              aria-label={`Remove placement ${idx + 1}`}
+              aria-label={t("inventory:removePlacement", { count: idx + 1 })}
             >
               ×
             </Button>
@@ -353,7 +357,9 @@ export function ManagePlacementsForm({
           disabled={disabled || !canAddRow}
           onClick={addRow}
         >
-          + Add{rows.length > 0 ? " another" : ""} location
+          {rows.length > 0
+            ? t("inventory:addAnotherLocation")
+            : t("inventory:addLocation")}
         </Button>
       </div>
 
@@ -364,14 +370,14 @@ export function ManagePlacementsForm({
       {isQty ? (
         <div className="mb-4 rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-sm">
           <div className="flex justify-between text-gray-700">
-            <span>Placed (manual)</span>
+            <span>{t("inventory:placedManual")}</span>
             <span className="tabular-nums">
               {placedSum} / {totalPool} {unit}
             </span>
           </div>
           {kitDrivenSum > 0 ? (
             <div className="flex justify-between text-blue-700">
-              <span>Via kits</span>
+              <span>{t("inventory:viaKits")}</span>
               <span className="tabular-nums">
                 {kitDrivenSum} {unit}
               </span>
@@ -379,14 +385,14 @@ export function ManagePlacementsForm({
           ) : null}
           {overPlacedBy > 0 ? (
             <div className="flex justify-between text-error-700">
-              <span>Over-placed</span>
+              <span>{t("inventory:overPlaced")}</span>
               <span className="tabular-nums">
                 {overPlacedBy} {unit}
               </span>
             </div>
           ) : (
             <div className="flex justify-between text-gray-500">
-              <span>Unplaced</span>
+              <span>{t("inventory:unplaced")}</span>
               <span className="tabular-nums">
                 {unplaced} {unit}
               </span>
@@ -411,7 +417,7 @@ export function ManagePlacementsForm({
 
       <div className="flex gap-3">
         <Button to=".." variant="secondary" width="full" disabled={disabled}>
-          Cancel
+          {t("common:cancel")}
         </Button>
         <Button
           type="submit"

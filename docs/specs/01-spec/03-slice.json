@@ -1,0 +1,113 @@
+{
+  "slice_id": "03-slice",
+  "slice_number": "03",
+  "title": "Interfaz compartida y formatos regionales",
+  "status": "in_progress",
+  "objective": "Ofrecer navegación, mensajes comunes y formatos de presentación consistentes en en/es.",
+  "problem": "Los componentes reutilizados y formateadores mantienen inglés aunque cambie una pantalla individual.",
+  "value_outcome": "El usuario cambia idioma desde el menú y ve navegación, diálogos comunes, fechas textuales y números coherentes, conservando sus preferencias regionales.",
+  "scope_summary": "Catálogo común y adaptadores de presentación reutilizados por módulos, con inventario de cobertura y glosario.",
+  "scope": {
+    "includes": [
+      "Selector del menú, navegación/breadcrumbs, botones, tablas/paginación, búsqueda, diálogos, estados vacíos, tooltips y textos accesibles.",
+      "Establecer glosario mínimo y mantener inventario de superficies en spec/slices; asignar cada módulo a su slice.",
+      "Traducir errores comunes y validaciones con códigos/claves estables sin cambiar contratos de negocio.",
+      "Adaptar nombres de meses/días, tiempo relativo, calendarios y presentación numérica respetando formatos existentes.",
+      "Controles de claves faltantes, variables y plurales entre catálogos; revisión de textos aún fuera de catálogos."
+    ],
+    "excludes": [
+      "Textos específicos de inventario, reservas y administración.",
+      "Cambiar zona horaria, moneda o cálculos por seleccionar idioma.",
+      "Cambiar formatos de intercambio o localizar Companion.",
+      "Modificar retrospectivamente contenido libre guardado."
+    ]
+  },
+  "actors": [
+    "Usuario autenticado",
+    "Visitante ante errores comunes",
+    "Usuarios de lectores de pantalla"
+  ],
+  "preconditions": [
+    "Slice 01 implementado.",
+    "Revisar @shelf/datetime, formateadores y consumidores antes de sustituir locales."
+  ],
+  "inputs": [
+    "Idioma resuelto, preferencias de fecha/hora/zona/semana y moneda existente.",
+    "Textos compartidos y catálogo de componentes utilizados."
+  ],
+  "outputs": [
+    "Catálogo común en/es y glosario.",
+    "Formatos de presentación localizados y compatibles.",
+    "Inventario por módulo en la documentación del spec y comprobaciones de catálogos."
+  ],
+  "workflow": [
+    {
+      "step": 1,
+      "name": "Inventariar",
+      "description": "Identificar componentes y rutas habilitadas, registrar glosario y responsables de cobertura por slice."
+    },
+    {
+      "step": 2,
+      "name": "Traducir componentes",
+      "description": "Migrar mensajes comunes, títulos, accesibilidad y etiquetas conservando valores y acciones."
+    },
+    {
+      "step": 3,
+      "name": "Separar formato y cálculo",
+      "description": "Localizar texto de fechas/números manteniendo extracción de partes, instantes y preferencias explícitas."
+    },
+    {
+      "step": 4,
+      "name": "Validar reutilización",
+      "description": "Revisar componentes representativos en móvil/escritorio, errores y ambas variantes lingüísticas."
+    }
+  ],
+  "business_rules": [
+    "RF-01 y RF-06/RF-07.",
+    "Cambiar idioma no cambia moneda, zona, orden de fecha, formato horario ni inicio de semana guardados.",
+    "No traducir códigos internos ni etiquetas de datos libres.",
+    "Clave faltante usa inglés como respaldo operativo, pero la superficie queda pendiente de cobertura.",
+    "Evitar concatenar fragmentos y mantener variables/plurales equivalentes."
+  ],
+  "validations": [
+    "Comprobación automatizada de paridad de claves/variables/plurales y revisión dirigida de textos hardcoded.",
+    "Unitarias de formateadores modificados con mismo instante y distintas zonas/preferencias; comparar SSR/cliente.",
+    "Una prueba de tiempo relativo y nombres de meses/días en ambos idiomas.",
+    "Revisión visual/teclado de menú, modal y tabla representativos en móvil/escritorio.",
+    "Si cambia @shelf/datetime, probar compatibilidad del contrato utilizado por Companion sin ampliar a una regresión móvil completa."
+  ],
+  "error_cases": [
+    "Idioma no admitido: aplicar resolución establecida, sin excepción de Intl.",
+    "Falta de traducción: respaldo en inglés y detección en controles de cobertura.",
+    "Textos largos: ajustar contenedor conservando legibilidad y acción accesible.",
+    "Errores comunes sin root loader disponible deben tener un respaldo traducible seguro."
+  ],
+  "acceptance_criteria": [
+    "03-AC1: menú permite cambiar idioma y navegación/componentes comunes se actualizan.",
+    "03-AC2: glosario e inventario asignan cobertura de módulos a los slices sin dejar rutas habilitadas sin responsable.",
+    "03-AC3: meses, días y tiempo relativo se localizan; zona/moneda/preferencias se mantienen.",
+    "03-AC4: textos accesibles y estados comunes tienen traducción; no hay recortes que impidan operar los ejemplos revisados.",
+    "03-AC5: controles de catálogo detectan claves/variables faltantes y no se confunden con cobertura de textos aún hardcoded."
+  ],
+  "dependencies": {
+    "functional": ["Idioma de petición disponible."],
+    "technical": [
+      "apps/webapp/app/components/",
+      "apps/webapp/app/utils/error.ts",
+      "apps/webapp/app/utils/date-format.ts",
+      "apps/webapp/app/utils/time-ago.ts",
+      "packages/datetime/src/index.ts"
+    ],
+    "external": [],
+    "depends_on_slices": ["01-slice"]
+  },
+  "implementation_order": 3,
+  "slicing_rationale": "Convierte una sola vez los componentes y formatos reutilizados para reducir duplicación en los módulos posteriores.",
+  "risks": [
+    "Sustituir en-US a ciegas puede alterar cálculos/preferencias del formateador existente.",
+    "Revalidar solo root puede dejar mensajes de loaders hijos anteriores: comprobar consumidores al cambiar idioma."
+  ],
+  "open_questions": [
+    "Fijar en el glosario el término de asset y los verbos de custody/check-out según el contexto, manteniendo español claro."
+  ]
+}

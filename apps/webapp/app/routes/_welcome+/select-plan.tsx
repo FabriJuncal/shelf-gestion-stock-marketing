@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Currency, Prisma } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import { data, type LoaderFunctionArgs, type MetaFunction } from "react-router";
 import { useLoaderData, useNavigation } from "react-router";
 import { Form } from "~/components/custom-form";
@@ -8,7 +9,6 @@ import { Button } from "~/components/shared/button";
 import { Card } from "~/components/shared/card";
 import { GrayBadge } from "~/components/shared/gray-badge";
 import { Tag } from "~/components/shared/tag";
-import { AUDIT_ADDON, BARCODE_ADDON } from "~/config/addon-copy";
 import { config } from "~/config/shelf.config";
 import { useSearchParams } from "~/hooks/search-params";
 import { getAuditAddonPrices } from "~/modules/audit/addon.server";
@@ -85,7 +85,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 // react-doctor:no-giant-component — deferred for follow-up refactor
 export default function SelectPlan() {
   const { prices, auditPrices, barcodePrices } = useLoaderData<typeof loader>();
+  const { t, i18n } = useTranslation();
   const [searchParams] = useSearchParams();
+  const locale = i18n.language === "es" ? "es-AR" : "en-US";
   type BillingInterval = "month" | "year";
 
   const planPrices = useMemo(() => {
@@ -137,7 +139,7 @@ export default function SelectPlan() {
     formatCurrency({
       value: amountInCents / 100,
       currency: currency as Currency,
-      locale: "en-US",
+      locale,
     });
 
   // Generate dynamic plan copy from Stripe prices
@@ -150,14 +152,18 @@ export default function SelectPlan() {
 
     let footnote = "";
     if (interval === "year") {
-      footnote = "Billed annually per workspace";
+      footnote = t("welcome:billedAnnuallyPerWorkspace");
     } else if (interval === "month") {
-      footnote = "Billed monthly per workspace";
+      footnote = t("welcome:billedMonthlyPerWorkspace");
     }
 
     return {
-      label: interval === "year" ? "Annual" : "Monthly",
-      price: `${formattedPrice}/${interval === "year" ? "yr" : "mo"}`,
+      label: interval === "year" ? t("welcome:annual") : t("welcome:monthly"),
+      price: `${formattedPrice}${
+        interval === "year"
+          ? t("welcome:perYearShort")
+          : t("welcome:perMonthShort")
+      }`,
       footnote,
     };
   };
@@ -174,30 +180,31 @@ export default function SelectPlan() {
   const totalAmount = teamPriceAmount + auditPriceAmount + barcodePriceAmount;
   const isYearly = selectedPlan === "year";
 
-  const billingLabel = isYearly ? "yr" : "mo";
+  const billingLabel = isYearly
+    ? t("welcome:perYearShort")
+    : t("welcome:perMonthShort");
 
   const selectedAddons = [
-    wantsAudits && "Audits",
-    wantsBarcodes && "Barcodes",
+    wantsAudits && t("welcome:audits"),
+    wantsBarcodes && t("welcome:barcodes"),
   ].filter(Boolean);
   const trialText =
     selectedAddons.length > 0
-      ? `You won't be charged during the trial. After ${
-          config.freeTrialDays
-        } days, continue on Team + ${selectedAddons.join(
-          " + "
-        )} or change plans.`
-      : `You won't be charged during the trial. After ${config.freeTrialDays} days, continue on Team or change plans.`;
+      ? t("welcome:trialWithAddons", {
+          days: config.freeTrialDays,
+          addons: selectedAddons.join(" + "),
+        })
+      : t("welcome:trialTeamOnly", { days: config.freeTrialDays });
 
   return (
     <div className="flex flex-col items-center p-4 sm:p-6">
       <ShelfSymbolLogo className="my-4 size-8 md:mt-0" />
       <div className="mb-8 text-center">
         <h3 className="text-2xl font-semibold text-gray-900">
-          Select your payment plan
+          {t("welcome:selectPaymentPlan")}
         </h3>
         <p className="mt-3 text-base text-gray-600">
-          No credit card or payment required to start your 7-day trial.{" "}
+          {t("welcome:noPaymentRequired", { days: config.freeTrialDays })}
         </p>
       </div>
 
@@ -208,9 +215,11 @@ export default function SelectPlan() {
       >
         <fieldset
           className="flex items-center justify-between gap-2"
-          aria-label="Billing interval"
+          aria-label={t("welcome:billingInterval")}
         >
-          <legend className="sr-only">Choose billing interval</legend>
+          <legend className="sr-only">
+            {t("welcome:chooseBillingInterval")}
+          </legend>
           {(Object.keys(planPrices) as BillingInterval[]).map((interval) => {
             const price = planPrices[interval];
             if (!price) return null;
@@ -247,7 +256,7 @@ export default function SelectPlan() {
                         " absolute right-2 top-2 bg-orange-100 text-orange-700"
                       )}
                     >
-                      Save 54%
+                      {t("welcome:savePercent", { percent: 54 })}
                     </Tag>
                   ) : null}
                   <span className="text-sm font-semibold text-primary-700">
@@ -268,10 +277,10 @@ export default function SelectPlan() {
         <section className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              Optional add-ons
+              {t("welcome:optionalAddons")}
             </h3>
             <p className="mt-1 text-sm text-gray-600">
-              Advanced capabilities for migrations & IT environments.
+              {t("welcome:optionalAddonsHelp")}
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -324,16 +333,18 @@ export default function SelectPlan() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h4 className="text-base font-semibold text-gray-900">
-                            {AUDIT_ADDON.label}
+                            {t("welcome:audits")}
                           </h4>
                           <Tag className="whitespace-nowrap bg-primary-50 text-primary-700">
-                            7-day trial
+                            {t("welcome:dayTrial", {
+                              days: config.freeTrialDays,
+                            })}
                           </Tag>
                         </div>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600">
-                      {AUDIT_ADDON.description}
+                      {t("welcome:auditsDescription")}
                     </p>
                     {activeAuditPrice ? (
                       <div className="mt-1">
@@ -342,11 +353,12 @@ export default function SelectPlan() {
                             activeAuditPrice.unit_amount || 0,
                             activeAuditPrice.currency
                           )}
-                          /{isYearly ? "yr" : "mo"}
+                          {billingLabel}
                         </span>
                         <p className="text-xs text-gray-500">
-                          Billed {isYearly ? "annually" : "monthly"} per
-                          workspace
+                          {isYearly
+                            ? t("welcome:billedAnnuallyPerWorkspace")
+                            : t("welcome:billedMonthlyPerWorkspace")}
                         </p>
                       </div>
                     ) : null}
@@ -404,16 +416,18 @@ export default function SelectPlan() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h4 className="text-base font-semibold text-gray-900">
-                            {BARCODE_ADDON.label}
+                            {t("welcome:barcodes")}
                           </h4>
                           <Tag className="whitespace-nowrap bg-primary-50 text-primary-700">
-                            7-day trial
+                            {t("welcome:dayTrial", {
+                              days: config.freeTrialDays,
+                            })}
                           </Tag>
                         </div>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600">
-                      {BARCODE_ADDON.description}
+                      {t("welcome:barcodesDescription")}
                     </p>
                     {activeBarcodePrice ? (
                       <div className="mt-1">
@@ -422,11 +436,12 @@ export default function SelectPlan() {
                             activeBarcodePrice.unit_amount || 0,
                             activeBarcodePrice.currency
                           )}
-                          /{isYearly ? "yr" : "mo"}
+                          {billingLabel}
                         </span>
                         <p className="text-xs text-gray-500">
-                          Billed {isYearly ? "annually" : "monthly"} per
-                          workspace
+                          {isYearly
+                            ? t("welcome:billedAnnuallyPerWorkspace")
+                            : t("welcome:billedMonthlyPerWorkspace")}
                         </p>
                       </div>
                     ) : null}
@@ -441,24 +456,25 @@ export default function SelectPlan() {
         <section className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              Enterprise integrations
+              {t("welcome:enterpriseIntegrations")}
             </h3>
           </div>
           <Card className="flex flex-col gap-3">
             <div>
               <h4 className="text-base font-semibold text-gray-900">
-                SSO Integration (Team only)
+                {t("welcome:ssoIntegration")}
               </h4>
               <div className="mt-1">
-                <GrayBadge className="whitespace-nowrap">Paid add-on</GrayBadge>
+                <GrayBadge className="whitespace-nowrap">
+                  {t("welcome:paidAddon")}
+                </GrayBadge>
               </div>
             </div>
             <p className="text-sm text-gray-600">
-              Single sign-on for your organization; centralized identity &
-              access.
+              {t("welcome:ssoDescription")}
             </p>
             <p className="text-xs text-gray-500">
-              Available for Team workspaces. Pricing provided during evaluation.
+              {t("welcome:ssoAvailability")}
             </p>
           </Card>
         </section>
@@ -467,27 +483,36 @@ export default function SelectPlan() {
         {activePrice && (
           <section className="rounded-xl border border-gray-200 bg-gray-50 p-5">
             <h3 className="mb-3 text-sm font-semibold text-gray-700">
-              Cost summary{" "}
+              {t("welcome:costSummary")}{" "}
               <span className="font-normal text-gray-600">
-                (applied after free trial ends)
+                ({t("welcome:afterTrial")})
               </span>
             </h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">
-                  Team ({isYearly ? "yearly" : "monthly"})
+                  {t("welcome:team")} (
+                  {isYearly
+                    ? t("welcome:yearlyLower")
+                    : t("welcome:monthlyLower")}
+                  )
                 </span>
                 <span className="font-medium text-gray-900">
-                  {fmtPrice(teamPriceAmount, teamPriceCurrency)}/{billingLabel}
+                  {fmtPrice(teamPriceAmount, teamPriceCurrency)}
+                  {billingLabel}
                 </span>
               </div>
               {wantsAudits && activeAuditPrice ? (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">
-                    Audits ({isYearly ? "yearly" : "monthly"})
+                    {t("welcome:audits")} (
+                    {isYearly
+                      ? t("welcome:yearlyLower")
+                      : t("welcome:monthlyLower")}
+                    )
                   </span>
                   <span className="font-medium text-gray-900">
-                    {fmtPrice(auditPriceAmount, activeAuditPrice.currency)}/
+                    {fmtPrice(auditPriceAmount, activeAuditPrice.currency)}
                     {billingLabel}
                   </span>
                 </div>
@@ -495,25 +520,32 @@ export default function SelectPlan() {
               {wantsBarcodes && activeBarcodePrice ? (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">
-                    Barcodes ({isYearly ? "yearly" : "monthly"})
+                    {t("welcome:barcodes")} (
+                    {isYearly
+                      ? t("welcome:yearlyLower")
+                      : t("welcome:monthlyLower")}
+                    )
                   </span>
                   <span className="font-medium text-gray-900">
-                    {fmtPrice(barcodePriceAmount, activeBarcodePrice.currency)}/
+                    {fmtPrice(barcodePriceAmount, activeBarcodePrice.currency)}
                     {billingLabel}
                   </span>
                 </div>
               ) : null}
               <div className="border-t border-gray-200 pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-900">Total</span>
                   <span className="font-semibold text-gray-900">
-                    {fmtPrice(totalAmount, teamPriceCurrency)}/{billingLabel}
+                    {t("welcome:total")}
+                  </span>
+                  <span className="font-semibold text-gray-900">
+                    {fmtPrice(totalAmount, teamPriceCurrency)}
+                    {billingLabel}
                   </span>
                 </div>
                 {isYearly && (
                   <p className="mt-1 text-right text-xs text-gray-500">
                     {fmtPrice(Math.round(totalAmount / 12), teamPriceCurrency)}
-                    /mo effective rate
+                    {t("welcome:effectiveMonthlyRate")}
                   </p>
                 )}
               </div>
@@ -552,12 +584,12 @@ export default function SelectPlan() {
           disabled={disabled}
           data-analytics="cta-start-trial"
         >
-          Start {config.freeTrialDays}-day free trial
+          {t("welcome:startFreeTrial", { days: config.freeTrialDays })}
         </Button>
       </Form>
 
       <Button variant="link" to="/welcome" className="mt-4">
-        Back
+        {t("welcome:back")}
       </Button>
     </div>
   );

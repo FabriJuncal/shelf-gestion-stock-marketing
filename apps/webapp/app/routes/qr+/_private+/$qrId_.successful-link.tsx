@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { MetaFunction, LoaderFunctionArgs } from "react-router";
 import { data, useLoaderData } from "react-router";
 import { z } from "zod";
@@ -87,6 +88,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 ];
 
 export default function QrSuccessfullLink() {
+  const { t } = useTranslation();
   const { qr } = useLoaderData<typeof loader>();
   const { item, type, normalizedName } = normalizeQrData(qr);
 
@@ -100,9 +102,12 @@ export default function QrSuccessfullLink() {
         <span className="mb-2.5 flex size-12 items-center justify-center rounded-full bg-success-50 p-2 text-success-600">
           <LinkIcon />
         </span>
-        <h3>Succesfully linked</h3>
+        <h3>{t("scanner:successfullyLinked")}</h3>
         <p>
-          Your {type} <b>{normalizedName}</b> has been linked with this QR code.
+          {t("scanner:itemLinkedToQr", {
+            itemType: t(`scanner:${type}`),
+            item: normalizedName,
+          })}
         </p>
         <div className="mt-8 flex w-full flex-col gap-3">
           <Button
@@ -110,10 +115,10 @@ export default function QrSuccessfullLink() {
             width="full"
             variant="secondary"
           >
-            View {type}
+            {t("scanner:viewItem", { itemType: t(`scanner:${type}`) })}
           </Button>
           <Button to={`/scanner`} width="full">
-            Go to scanner
+            {t("scanner:goToScanner")}
           </Button>
         </div>
       </div>

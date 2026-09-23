@@ -8,6 +8,7 @@
  * @see {@link file://./language-region-form.tsx}
  */
 import { describe, it, expect } from "vitest";
+import { isAppLanguage } from "~/i18n/types";
 import { FormatPrefsFormSchema } from "./language-region-form";
 
 describe("FormatPrefsFormSchema", () => {
@@ -49,5 +50,13 @@ describe("FormatPrefsFormSchema", () => {
       timeZone: "",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("language preference", () => {
+  it("allows only the two supported interface languages", () => {
+    expect(isAppLanguage("en")).toBe(true);
+    expect(isAppLanguage("es")).toBe(true);
+    expect(isAppLanguage("es-AR")).toBe(false);
   });
 });

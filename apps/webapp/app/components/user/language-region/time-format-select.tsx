@@ -13,6 +13,7 @@
  * @see {@link file://./language-region-form.tsx}
  */
 import type { TimeFormatPreference } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import { EnumPreferenceSelect } from "./enum-preference-select";
 
 /** One selectable time-format option. */
@@ -49,11 +50,17 @@ type TimeFormatSelectProps = {
  * @returns The time-format selector control
  */
 export function TimeFormatSelect(props: TimeFormatSelectProps) {
+  const { t } = useTranslation();
+  const options = OPTIONS.map((option) => ({
+    ...option,
+    label: t(`format:${option.value}.label`),
+    description: t(`format:${option.value}.description`),
+  }));
   return (
     <EnumPreferenceSelect
       {...props}
-      options={OPTIONS}
-      ariaLabel="Time format options"
+      options={options}
+      ariaLabel={t("format:timeOptions")}
     />
   );
 }

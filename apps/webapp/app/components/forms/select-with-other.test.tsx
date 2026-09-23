@@ -66,6 +66,24 @@ describe("SelectWithOther without JavaScript", () => {
       '<option value="IT Administrator" selected="">IT Administrator</option>'
     );
   });
+
+  it("localizes labels without changing submitted option values", () => {
+    const html = renderToStaticMarkup(
+      <SelectWithOther
+        label="¿Cuál es tu rol?"
+        name="jobTitle"
+        options={OPTIONS}
+        optionLabels={{ "IT Administrator": "Administrador de TI" }}
+        otherOptionLabel="Otro"
+        otherInputLabel="Especificá tu rol"
+      />
+    );
+
+    expect(html).toContain(
+      '<option value="IT Administrator">Administrador de TI</option>'
+    );
+    expect(html).toContain('<option value="Other">Otro</option>');
+  });
 });
 
 describe("SelectWithOther once hydrated", () => {

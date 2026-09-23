@@ -1,0 +1,15 @@
+{{ if eq .Data.language "es" }}
+<p>Para iniciar sesión, usá el siguiente código de un solo uso (OTP):</p>
+<h2><b>{{ .Token }}</b></h2>
+<p>
+  No compartas este código con nadie. Nuestro equipo de soporte nunca te pedirá
+  tu contraseña, código, tarjeta de crédito ni información bancaria.
+</p>
+{{ else }}
+<p>To sign in, use the following one-time password (OTP):</p>
+<h2><b>{{ .Token }}</b></h2>
+<p>
+  Do not share this code with anyone. Our support team will never ask for your
+  password, code, credit card, or banking information.
+</p>
+{{ end }}

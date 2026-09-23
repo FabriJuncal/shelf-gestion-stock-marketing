@@ -21,9 +21,11 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider, createStore } from "jotai";
+import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { selectedBulkItemsAtom } from "~/atoms/list";
 import type { ListItemData } from "~/components/list/list-item";
+import { createI18n } from "~/i18n/i18n";
 import type { BulkQrDownloadLoaderData } from "~/routes/api+/assets.get-assets-for-bulk-qr-download";
 import BulkDownloadQrDialog from "./bulk-download-qr-dialog";
 
@@ -181,7 +183,9 @@ function renderDialog() {
   const onClose = vi.fn();
   const utils = render(
     <Provider store={store}>
-      <BulkDownloadQrDialog isDialogOpen onClose={onClose} />
+      <I18nextProvider i18n={createI18n("en")}>
+        <BulkDownloadQrDialog isDialogOpen onClose={onClose} />
+      </I18nextProvider>
     </Provider>
   );
   return { store, onClose, ...utils };
@@ -214,7 +218,7 @@ describe("BulkDownloadQrDialog", () => {
     await setFilterAndSelection(store, "category=cat-A", ["a1", "a2"]);
 
     await user.click(await screen.findByRole("button", { name: "Download" }));
-    await screen.findByText(/successfully downloaded qr codes/i);
+    await screen.findByText("QR codes downloaded successfully.");
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const firstUrl = fetchSpy.mock.calls[0][0] as string;
@@ -278,7 +282,7 @@ describe("BulkDownloadQrDialog", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText(/successfully downloaded qr codes/i)
+        screen.getByText("QR codes downloaded successfully.")
       ).toBeInTheDocument()
     );
 

@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { DateTime } from "luxon";
+import { useTranslation } from "react-i18next";
 import FormRow from "~/components/forms/form-row";
 import { DateTimePicker } from "~/components/shared/date-time-picker";
 import { InfoBox } from "~/components/shared/info-box";
@@ -40,6 +41,7 @@ export function DatesFields({
   isNewBooking?: boolean;
   workingHoursData: NonNullable<ReturnType<typeof useWorkingHours>>;
 }) {
+  const { t } = useTranslation();
   const { isLoading = true, error } = workingHoursData;
   const workingHoursDisabled = disabled || isLoading;
   const { maxBookingLength, bufferStartTime } = useBookingSettings();
@@ -47,14 +49,14 @@ export function DatesFields({
   return (
     <>
       <FormRow
-        rowLabel="Start Date"
+        rowLabel={t("booking:startDate")}
         className="mobile-styling-only border-b-0 pb-[10px] pt-0"
         required
       >
         <DateTimePicker
           key="start-date-input"
           mode="datetime"
-          label="Start Date"
+          label={t("booking:startDate")}
           hideLabel
           name={startDateName}
           disabled={workingHoursDisabled}
@@ -67,7 +69,7 @@ export function DatesFields({
           // keep showing the previously-rendered booking's start date until a
           // full page refresh. A controlled `value` reflects the update.
           value={startDate}
-          placeholder="Booking"
+          placeholder={t("booking:startDate")}
           required
           onChange={(wire) => {
             // `wire` is the emitted wire string in DATE_TIME_FORMAT
@@ -127,20 +129,20 @@ export function DatesFields({
         />
       </FormRow>
       <FormRow
-        rowLabel="End Date"
+        rowLabel={t("booking:endDate")}
         className="mobile-styling-only mb-2.5 border-b-0 p-0"
         required
       >
         <DateTimePicker
           key={"end-date-input"}
           mode="datetime"
-          label="End Date"
+          label={t("booking:endDate")}
           hideLabel
           name={endDateName}
           disabled={workingHoursDisabled}
           error={endDateError}
           className="w-full"
-          placeholder="Booking"
+          placeholder={t("booking:endDate")}
           required
           value={endDate}
           onChange={(wire) => {
@@ -151,21 +153,19 @@ export function DatesFields({
         />
 
         <p className="text-[14px] text-gray-600">
-          Within this period the assets in this booking will be checked out and
-          unavailable for other bookings.
+          {t("booking:bookingDateHint")}
         </p>
         {(maxBookingLength || bufferStartTime > 0) && (
           <Separator className="my-2" />
         )}
         {maxBookingLength && (
           <p className="text-[14px] text-gray-600">
-            Maximum booking length is <strong>{maxBookingLength} hours</strong>.
+            {t("booking:maximumBookingLength", { hours: maxBookingLength })}
           </p>
         )}
         {bufferStartTime > 0 && (
           <p className="text-[14px] text-gray-600">
-            Minimum advance notice: <strong>{bufferStartTime} hours</strong>{" "}
-            before booking start time.
+            {t("booking:minimumAdvanceNotice", { hours: bufferStartTime })}
           </p>
         )}
       </FormRow>
@@ -175,7 +175,7 @@ export function DatesFields({
       />
       {error && (
         <p className="mt-1 text-sm text-orange-600">
-          Working hours validation unavailable: {error}
+          {t("booking:workingHoursUnavailable", { error })}
         </p>
       )}
     </>
@@ -191,11 +191,12 @@ export function WorkingHoursInfo({
   loading: boolean;
   className?: string;
 }) {
+  const { t } = useTranslation();
   if (loading) {
     return (
       <InfoBox className={tw("py-2", className)}>
         <div className="flex items-center gap-2">
-          <div>Loading working hours</div>
+          <div>{t("booking:loadingWorkingHours")}</div>
           <Spinner className="mt-1 size-4" />
         </div>
       </InfoBox>
@@ -208,13 +209,13 @@ export function WorkingHoursInfo({
   // Get working days from weekly schedule
   const workingDays: string[] = [];
   const dayNames = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
+    t("booking:weekdays.sunday"),
+    t("booking:weekdays.monday"),
+    t("booking:weekdays.tuesday"),
+    t("booking:weekdays.wednesday"),
+    t("booking:weekdays.thursday"),
+    t("booking:weekdays.friday"),
+    t("booking:weekdays.saturday"),
   ];
 
   const workingDaySchedules: Array<{
@@ -251,33 +252,36 @@ export function WorkingHoursInfo({
     <InfoBox className={tw("py-2", className)}>
       {loading ? (
         <div className="flex items-center gap-2">
-          <div>Loading working hours</div>
+          <div>{t("booking:loadingWorkingHours")}</div>
           <Spinner className="mt-1 size-4" />
         </div>
       ) : (
         <div className="mt-1 text-sm text-gray-600">
           <p>
-            <strong>Working days:</strong>{" "}
-            {workingDays.length > 0 ? workingDays.join(", ") : "None"}
+            <strong>{t("booking:workingDays")}</strong>{" "}
+            {workingDays.length > 0
+              ? workingDays.join(", ")
+              : t("booking:none")}
           </p>
           {hasUniformHours ? (
             <p>
-              <strong>Working hours:</strong>{" "}
+              <strong>{t("booking:workingHours")}</strong>{" "}
               <TimeDisplay time={workingDaySchedules[0].openTime} /> -{" "}
               <TimeDisplay time={workingDaySchedules[0].closeTime} />
             </p>
           ) : (
             <p>
-              <strong>Working hours:</strong> Vary by day
+              <strong>{t("booking:workingHours")}</strong>{" "}
+              {t("booking:varyByDay")}
             </p>
           )}
           {workingHours.overrides.length > 0 && (
             <p className="mt-1 text-xs text-gray-500">
-              Special dates and holidays are also considered
+              {t("booking:specialDatesNote")}
             </p>
           )}
           <p className="mt-1 text-xs text-gray-500">
-            Local hours of the physical location
+            {t("booking:locationLocalHours")}
           </p>
           <div className="shrink-0">
             <WorkingHoursPreviewDialog workingHoursData={workingHoursData} />

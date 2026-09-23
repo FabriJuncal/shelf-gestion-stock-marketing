@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
+import { useTranslation } from "react-i18next";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -22,9 +23,23 @@ import Input from "~/components/forms/input";
 import PasswordInput from "~/components/forms/password-input";
 import { Button } from "~/components/shared/button";
 import { config } from "~/config/shelf.config";
+import { db } from "~/database/db.server";
 import { useSearchParams } from "~/hooks/search-params";
 import { useAutoFocus } from "~/hooks/use-auto-focus";
+import { createI18n } from "~/i18n/i18n";
+import {
+  reconcileLanguageWithSupabase,
+  withLanguageSyncStatus,
+} from "~/i18n/language-sync.server";
+import { resolveRequestLanguage } from "~/i18n/language.server";
+import { normalizeLanguage } from "~/i18n/types";
+import { getSupabaseAdmin } from "~/integrations/supabase/client";
 import { ContinueWithEmailForm } from "~/modules/auth/components/continue-with-email-form";
+import {
+  AUTH_ERROR_CODES,
+  authErrorData,
+  localizeAuthError,
+} from "~/modules/auth/localize-error.server";
 import {
   refreshAccessToken,
   signInWithEmail,
@@ -56,9 +71,10 @@ import {
 } from "~/utils/http.server";
 import { validEmail } from "~/utils/misc";
 
-export function loader({ context }: LoaderFunctionArgs) {
-  const title = "Log in";
-  const subHeading = "Welcome back! Enter your details below to log in.";
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
+  const title = i18n.t("auth:login");
+  const subHeading = i18n.t("auth:welcomeBack");
   const { disableSignup, disableSSO } = config;
 
   if (context.isAuthenticated) {
@@ -68,16 +84,18 @@ export function loader({ context }: LoaderFunctionArgs) {
   return data(payload({ title, subHeading, disableSignup, disableSSO }));
 }
 
-const LoginFormSchema = z.object({
-  email: z
-    .string()
-    .transform((email) => email.toLowerCase())
-    .refine(validEmail, () => ({
-      message: "Please enter a valid email",
-    })),
-  password: z.string().min(8, "Password is too short. Minimum 8 characters."),
-  redirectTo: z.string().optional(),
-});
+function createLoginFormSchema(t: (key: string) => string) {
+  return z.object({
+    email: z
+      .string()
+      .transform((email) => email.toLowerCase())
+      .refine(validEmail, () => ({
+        message: t("auth:invalidEmail"),
+      })),
+    password: z.string().min(8, t("auth:passwordTooShort")),
+    redirectTo: z.string().optional(),
+  });
+}
 
 const EmailConfirmationSchema = z.object({
   intent: z.literal("complete-email-confirmation"),
@@ -109,10 +127,25 @@ async function completeLogin({
     try {
       const username = await generateUniqueUsername(email);
       const formatPrefs = detectFormatPrefsForPersistence(request);
+      const { data: authUser, error: authUserError } =
+        await getSupabaseAdmin().auth.admin.getUserById(userId);
+      if (authUserError) {
+        throw new ShelfError({
+          cause: authUserError,
+          label: "Auth",
+          message: "Failed to read authentication metadata",
+          additionalData: authErrorData(AUTH_ERROR_CODES.generic),
+        });
+      }
+
+      const language =
+        normalizeLanguage(authUser.user?.user_metadata?.language) ??
+        (await resolveRequestLanguage({ request }));
       await createUser({
         ...authSession,
         username,
         formatPrefs,
+        language,
       });
     } catch (createError) {
       // A simultaneous OTP/password request may already have created it.
@@ -123,6 +156,15 @@ async function completeLogin({
     }
   }
 
+  const localUser = await db.user.findUnique({
+    where: { id: userId },
+    select: { language: true },
+  });
+  const languageSyncStatus = await reconcileLanguageWithSupabase(
+    userId,
+    localUser?.language ?? null
+  );
+
   const { organizationId } = await getSelectedOrganization({
     userId,
     request,
@@ -130,12 +172,22 @@ async function completeLogin({
 
   context.setSession(authSession);
 
-  return redirect(safeRedirect(redirectTo || "/assets"), {
-    headers: [setCookie(await setSelectedOrganizationIdCookie(organizationId))],
-  });
+  return redirect(
+    withLanguageSyncStatus(
+      safeRedirect(redirectTo || "/assets"),
+      languageSyncStatus
+    ),
+    {
+      headers: [
+        setCookie(await setSelectedOrganizationIdCookie(organizationId)),
+      ],
+    }
+  );
 }
 
 export async function action({ context, request }: ActionFunctionArgs) {
+  const i18n = createI18n(await resolveRequestLanguage({ request }));
+
   try {
     const method = getActionMethod(request);
 
@@ -151,7 +203,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
             error(
               new ShelfError({
                 cause: null,
-                message: "Invalid request",
+                message: i18n.t("auth:invalidRequest"),
                 label: "Request validation",
                 shouldBeCaptured: false,
                 status: 400,
@@ -170,7 +222,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
             error(
               new ShelfError({
                 cause,
-                message: "Invalid request body",
+                message: i18n.t("auth:invalidRequestBody"),
                 label: "Request validation",
                 shouldBeCaptured: false,
                 status: 400,
@@ -199,7 +251,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
 
         const { email, password, redirectTo } = parseData(
           formData,
-          LoginFormSchema,
+          createLoginFormSchema((key) => i18n.t(key)),
           { shouldBeCaptured: false }
         );
 
@@ -227,7 +279,8 @@ export async function action({ context, request }: ActionFunctionArgs) {
         ? cause.shouldBeCaptured
         : !isZodValidationError(cause)
     );
-    return data(error(reason), { status: reason.status });
+    const localizedReason = localizeAuthError(reason, (key) => i18n.t(key));
+    return data(error(localizedReason), { status: localizedReason.status });
   }
 }
 
@@ -237,7 +290,9 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
 
 export default function IndexLoginForm() {
   const { disableSignup, disableSSO } = useLoaderData<typeof loader>();
-  const zo = useZorm("NewQuestionWizardScreen", LoginFormSchema);
+  const { t } = useTranslation();
+  const schema = useMemo(() => createLoginFormSchema((key) => t(key)), [t]);
+  const zo = useZorm("NewQuestionWizardScreen", schema);
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? undefined;
   const acceptedInvite = searchParams.get("acceptedInvite");
@@ -280,15 +335,13 @@ export default function IndexLoginForm() {
     <div className="w-full max-w-md">
       {acceptedInvite ? (
         <div className="mb-8 text-center text-success-600">
-          Successfully accepted workspace invite. Please login to see your new
-          workspace.
+          {t("auth:acceptedInvite")}
         </div>
       ) : null}
 
       {passwordReset ? (
         <div className="mb-8 text-center text-success-600">
-          You have successfully reset your password. You can now use your new
-          password to login.
+          {t("auth:passwordReset")}
         </div>
       ) : null}
       <Form ref={zo.ref} method="post" replace className="flex flex-col gap-5">
@@ -296,7 +349,7 @@ export default function IndexLoginForm() {
           <Input
             ref={emailInputRef}
             data-test-id="email"
-            label="Email address"
+            label={t("auth:emailAddress")}
             placeholder="zaans@huisje.com"
             required
             name={zo.fields.email()}
@@ -308,7 +361,7 @@ export default function IndexLoginForm() {
           />
         </div>
         <PasswordInput
-          label="Password"
+          label={t("auth:password")}
           placeholder="**********"
           data-test-id="password"
           name={zo.fields.password()}
@@ -324,11 +377,11 @@ export default function IndexLoginForm() {
           data-test-id="login"
           disabled={disabled}
         >
-          Log In
+          {t("auth:login")}
         </Button>
         <div className="flex flex-col items-center justify-center">
           <div className="text-center text-sm text-gray-500">
-            Don't remember your password?{" "}
+            {t("auth:forgotPassword")}{" "}
             <Button
               variant="link"
               to={{
@@ -336,7 +389,7 @@ export default function IndexLoginForm() {
                 search: searchParams.toString(),
               }}
             >
-              Reset password
+              {t("auth:resetPassword")}
             </Button>
           </div>
         </div>
@@ -344,7 +397,7 @@ export default function IndexLoginForm() {
       {!disableSSO && (
         <div className="mt-6 text-center">
           <Button variant="link" to="/sso-login">
-            Login with SSO
+            {t("auth:loginWithSso")}
           </Button>
         </div>
       )}
@@ -356,10 +409,8 @@ export default function IndexLoginForm() {
           </div>
           <div className="relative flex justify-center text-sm">
             <span className="bg-white px-2 text-gray-500">
-              Or use a{" "}
-              <strong title="One Time Password (OTP) is the most secure way to login. We will send you a code to your email.">
-                One Time Password
-              </strong>
+              {t("auth:orUse")}{" "}
+              <strong title={t("auth:otpHelp")}>{t("auth:otp")}</strong>
             </span>
           </div>
         </div>
@@ -368,7 +419,7 @@ export default function IndexLoginForm() {
         </div>
         {disableSignup ? null : (
           <div className="mt-6 text-center text-sm text-gray-500">
-            Don't have an account?{" "}
+            {t("auth:noAccount")}{" "}
             <Button
               variant="link"
               data-test-id="signupButton"
@@ -377,7 +428,7 @@ export default function IndexLoginForm() {
                 search: searchParams.toString(),
               }}
             >
-              Sign up
+              {t("auth:signUp")}
             </Button>
           </div>
         )}

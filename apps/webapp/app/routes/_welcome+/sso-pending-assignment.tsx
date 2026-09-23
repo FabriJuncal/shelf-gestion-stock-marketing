@@ -8,6 +8,7 @@
  * them. Uses the `_welcome+` layout for a centered, standalone card.
  */
 import type { Prisma } from "@prisma/client";
+import { useTranslation } from "react-i18next";
 import type { LoaderFunctionArgs, MetaFunction } from "react-router";
 import { Form, redirect } from "react-router";
 import { ShelfSymbolLogo } from "~/components/marketing/logos";
@@ -49,26 +50,26 @@ export async function loader({ context }: LoaderFunctionArgs) {
 }
 
 export default function SsoPendingAssignment() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center px-6 py-12 text-center md:px-12">
       <ShelfSymbolLogo className="mb-6 size-12" />
 
-      <h1 className="mb-2 text-[24px] font-semibold">No workspace assigned</h1>
+      <h1 className="mb-2 text-[24px] font-semibold">
+        {t("auth:noWorkspaceAssigned")}
+      </h1>
 
       <p className="mx-auto mb-6 max-w-md text-gray-600">
-        You don&apos;t currently have access to any workspace in Shelf. This
-        usually means your administrator hasn&apos;t assigned you to one yet.
+        {t("auth:noWorkspaceAssignedHelp")}
       </p>
 
       <p className="mx-auto mb-8 max-w-md text-sm text-gray-500">
-        Contact your IT administrator to request access. Once they&apos;ve
-        updated your group assignments, log out and log back in for the changes
-        to take effect.
+        {t("auth:noWorkspaceAssignedNext")}
       </p>
 
       <Form method="post" action="/logout">
         <Button type="submit" variant="secondary">
-          Log out
+          {t("sidebar:logOut")}
         </Button>
       </Form>
     </div>

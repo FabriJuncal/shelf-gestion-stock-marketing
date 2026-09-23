@@ -312,6 +312,27 @@ describe("formatDate — month-name preferences", () => {
   });
 });
 
+describe("formatDate — display locale", () => {
+  it("localizes display names without changing the saved date order", () => {
+    expect(formatDate(JUL, US_NAME, { displayLocale: "es" })).toBe(
+      "jul 20, 2026"
+    );
+    expect(formatDate(JUL, EU_NAME, { displayLocale: "es" })).toBe(
+      "20 jul 2026"
+    );
+  });
+
+  it("localizes weekday names while preserving the chosen date format", () => {
+    expect(
+      formatDate("2026-07-31T12:00:00Z", EU_NAME, {
+        displayLocale: "es",
+        includeWeekday: true,
+        localeOnly: true,
+      })
+    ).toBe("viernes, 31 jul 2026");
+  });
+});
+
 describe("formatDate — includeWeekday (additive weekday prefix)", () => {
   // Mirrors the working-hours override surface: an absolute calendar date (bare
   // YYYY-MM-DD, localeOnly so no tz shift) that must show the weekday BUT still
