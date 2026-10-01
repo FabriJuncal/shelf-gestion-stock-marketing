@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -9,6 +11,7 @@ import {
   useActionData,
   useLoaderData,
   useNavigation,
+  useSubmit,
 } from "react-router";
 
 import { useZorm } from "react-zorm";
@@ -22,13 +25,19 @@ import { config } from "~/config/shelf.config";
 import { useSearchParams } from "~/hooks/search-params";
 import { useAutoFocus } from "~/hooks/use-auto-focus";
 import { ContinueWithEmailForm } from "~/modules/auth/components/continue-with-email-form";
-import { signInWithEmail } from "~/modules/auth/service.server";
+import {
+  refreshAccessToken,
+  signInWithEmail,
+} from "~/modules/auth/service.server";
 
 import {
   getSelectedOrganization,
   setSelectedOrganizationIdCookie,
 } from "~/modules/organization/context.server";
+import { createUser, findUserByEmail } from "~/modules/user/service.server";
+import { generateUniqueUsername } from "~/modules/user/utils.server";
 import { appendToMetaTitle } from "~/utils/append-to-meta-title";
+import { detectFormatPrefsForPersistence } from "~/utils/client-hints";
 import { setCookie } from "~/utils/cookies.server";
 import {
   ShelfError,
@@ -69,6 +78,62 @@ const LoginFormSchema = z.object({
   password: z.string().min(8, "Password is too short. Minimum 8 characters."),
   redirectTo: z.string().optional(),
 });
+
+const EmailConfirmationSchema = z.object({
+  intent: z.literal("complete-email-confirmation"),
+  refreshToken: z.string().min(1),
+  redirectTo: z.string().optional(),
+});
+
+async function completeLogin({
+  authSession,
+  context,
+  request,
+  redirectTo,
+}: {
+  authSession: Awaited<ReturnType<typeof refreshAccessToken>>;
+  context: ActionFunctionArgs["context"];
+  request: Request;
+  redirectTo?: string;
+}) {
+  const { email, userId } = authSession;
+
+  /**
+   * A Supabase confirmation link can authenticate a user before Shelf has
+   * provisioned its application user and personal organization. Complete that
+   * setup idempotently for both confirmation links and password login.
+   */
+  const userExists = Boolean(await findUserByEmail(email));
+
+  if (!userExists) {
+    try {
+      const username = await generateUniqueUsername(email);
+      const formatPrefs = detectFormatPrefsForPersistence(request);
+      await createUser({
+        ...authSession,
+        username,
+        formatPrefs,
+      });
+    } catch (createError) {
+      // A simultaneous OTP/password request may already have created it.
+      const userNowExists = Boolean(await findUserByEmail(email));
+      if (!userNowExists) {
+        throw createError;
+      }
+    }
+  }
+
+  const { organizationId } = await getSelectedOrganization({
+    userId,
+    request,
+  });
+
+  context.setSession(authSession);
+
+  return redirect(safeRedirect(redirectTo || "/assets"), {
+    headers: [setCookie(await setSelectedOrganizationIdCookie(organizationId))],
+  });
+}
 
 export async function action({ context, request }: ActionFunctionArgs) {
   try {
@@ -116,6 +181,22 @@ export async function action({ context, request }: ActionFunctionArgs) {
           );
         }
 
+        if (formData.get("intent") === "complete-email-confirmation") {
+          const { refreshToken, redirectTo } = parseData(
+            formData,
+            EmailConfirmationSchema,
+            { shouldBeCaptured: false }
+          );
+          const authSession = await refreshAccessToken(refreshToken);
+
+          return await completeLogin({
+            authSession,
+            context,
+            request,
+            redirectTo,
+          });
+        }
+
         const { email, password, redirectTo } = parseData(
           formData,
           LoginFormSchema,
@@ -127,25 +208,12 @@ export async function action({ context, request }: ActionFunctionArgs) {
         if (!authSession) {
           return redirect(`/otp?email=${encodeURIComponent(email)}&mode=login`);
         }
-        const { userId } = authSession;
 
-        /**
-         * The only reason we need to do this is because of the initial login
-         * Theoretically, the user should always have a selected organization cookie as soon as they login for the first time
-         * However we do this check to make sure they are still part of that organization
-         */
-        const { organizationId } = await getSelectedOrganization({
-          userId,
+        return await completeLogin({
+          authSession,
+          context,
           request,
-        });
-
-        // Set the auth session and redirect to the assets page
-        context.setSession(authSession);
-
-        return redirect(safeRedirect(redirectTo || "/assets"), {
-          headers: [
-            setCookie(await setSelectedOrganizationIdCookie(organizationId)),
-          ],
+          redirectTo,
         });
       }
     }
@@ -175,6 +243,32 @@ export default function IndexLoginForm() {
   const acceptedInvite = searchParams.get("acceptedInvite");
   const passwordReset = searchParams.get("password_reset");
   const data = useActionData<typeof action>();
+  const submit = useSubmit();
+  const confirmationSubmitted = useRef(false);
+
+  useEffect(() => {
+    if (confirmationSubmitted.current || !window.location.hash) return;
+
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+
+    if (!accessToken || !refreshToken) return;
+
+    confirmationSubmitted.current = true;
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${window.location.search}`
+    );
+
+    const formData = new FormData();
+    formData.set("intent", "complete-email-confirmation");
+    formData.set("refreshToken", refreshToken);
+    if (redirectTo) formData.set("redirectTo", redirectTo);
+
+    void submit(formData, { method: "post", replace: true });
+  }, [redirectTo, submit]);
 
   const navigation = useNavigation();
   const disabled = isFormProcessing(navigation.state);

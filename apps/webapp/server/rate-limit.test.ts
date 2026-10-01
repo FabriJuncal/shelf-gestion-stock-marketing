@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { session } from "remix-hono/session";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { appLoaderRateLimit, calendarFeedRateLimit } from "./rate-limit";
 import { createSessionStorage } from "./session";
+import { session } from "./session-middleware";
 
 const mockHandledClientError = vi.hoisted(() => vi.fn());
 

@@ -1,11 +1,11 @@
 import type { Context } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
-import { getSession } from "remix-hono/session";
 import { ShelfError } from "~/utils/error";
 import { Logger } from "~/utils/logger";
 import { getClientIp } from "./client-ip";
 import { authSessionKey } from "./session";
 import type { FlashData, SessionData } from "./session";
+import { getSession } from "./session-middleware";
 
 /**
  * How long one bucket stays silent after emitting a telemetry entry. Matches

@@ -72,81 +72,87 @@ const httpsConfig =
     ? { key: certKeyPath, cert: certPath }
     : undefined;
 
-export default defineConfig({
-  envDir: "../..",
-  ssr: {
-    noExternal: [
-      "@shelf/database",
-      "@shelf/datetime",
-      "@shelf/labels",
-      "@shelf/permissions",
-      "@shelf/quantity-control",
-    ],
-  },
-  server: {
-    port: 3000,
-    https: httpsConfig,
-    warmup: {
-      // These globs pull files into the CLIENT module graph. Anything under
-      // `app/routes/` that is not a route (a test, a fixture) gets warmed too,
-      // and if it imports a `*.server` module React Router rejects it with
-      // "Server-only module referenced by client" — breaking the dev server
-      // even though the file is excluded from the route tree.
-      //
-      // The negation MUST stay a superset of `ignoredRouteFiles` in
-      // `app/routes.ts`. It is defense in depth only: test files are barred
-      // from `app/routes/` outright by `local-rules/no-test-files-in-routes`.
-      clientFiles: [
-        "./app/entry.client.tsx",
-        "./app/root.tsx",
-        "./app/routes/**/*.tsx",
-        "./app/routes/**/*.ts",
-        "!./app/routes/**/*.test.*",
-        "!./app/routes/**/*.spec.*",
+export default defineConfig(({ isSsrBuild }) => {
+  const isVercel = Boolean(process.env.VERCEL);
+
+  return {
+    envDir: "../..",
+    ssr: {
+      noExternal: [
+        "@shelf/database",
+        "@shelf/datetime",
+        "@shelf/labels",
+        "@shelf/permissions",
+        "@shelf/quantity-control",
       ],
     },
-  },
-  optimizeDeps: {
-    include: ["./app/routes/**/*.tsx", "./app/routes/**/*.ts"],
-  },
-  build: {
-    // Browser floor for the client bundle. Pinned explicitly (not a Vite alias
-    // such as "baseline-widely-available", which moves between releases) and
-    // equal to the runtime floor probed by `app/utils/browser-support.ts`:
-    // syntax newer than this set is lowered at build time, so a browser below
-    // the floor fails only on the missing runtime APIs that check detects and
-    // turns into an explicit message. Change the two together. Regex lookbehind
-    // is the exception: it cannot be lowered, so ESLint rejects it in client code.
-    target: ["chrome98", "edge98", "firefox94", "safari15.4"],
-    assetsDir: `file-assets`,
-    rollupOptions: {
-      output: {
-        entryFileNames: `file-assets/${buildHash}/[name]-[hash].js`,
-        chunkFileNames() {
-          return `file-assets/${buildHash}/[name]-[hash].js`;
-        },
-        assetFileNames() {
-          return `file-assets/${buildHash}/[name][extname]`;
+    server: {
+      port: 3000,
+      https: httpsConfig,
+      warmup: {
+        // These globs pull files into the CLIENT module graph. Anything under
+        // `app/routes/` that is not a route (a test, a fixture) gets warmed too,
+        // and if it imports a `*.server` module React Router rejects it with
+        // "Server-only module referenced by client" — breaking the dev server
+        // even though the file is excluded from the route tree.
+        //
+        // The negation MUST stay a superset of `ignoredRouteFiles` in
+        // `app/routes.ts`. It is defense in depth only: test files are barred
+        // from `app/routes/` outright by `local-rules/no-test-files-in-routes`.
+        clientFiles: [
+          "./app/entry.client.tsx",
+          "./app/root.tsx",
+          "./app/routes/**/*.tsx",
+          "./app/routes/**/*.ts",
+          "!./app/routes/**/*.test.*",
+          "!./app/routes/**/*.spec.*",
+        ],
+      },
+    },
+    optimizeDeps: {
+      include: ["./app/routes/**/*.tsx", "./app/routes/**/*.ts"],
+    },
+    build: {
+      // Browser floor for the client bundle. Pinned explicitly (not a Vite alias
+      // such as "baseline-widely-available", which moves between releases) and
+      // equal to the runtime floor probed by `app/utils/browser-support.ts`:
+      // syntax newer than this set is lowered at build time, so a browser below
+      // the floor fails only on the missing runtime APIs that check detects and
+      // turns into an explicit message. Change the two together. Regex lookbehind
+      // is the exception: it cannot be lowered, so ESLint rejects it in client code.
+      target: ["chrome98", "edge98", "firefox94", "safari15.4"],
+      assetsDir: `file-assets`,
+      rollupOptions: {
+        ...(isVercel && isSsrBuild ? { input: "./server/vercel.ts" } : {}),
+        output: {
+          entryFileNames: `file-assets/${buildHash}/[name]-[hash].js`,
+          chunkFileNames() {
+            return `file-assets/${buildHash}/[name]-[hash].js`;
+          },
+          assetFileNames() {
+            return `file-assets/${buildHash}/[name][extname]`;
+          },
         },
       },
     },
-  },
-  resolve: {
-    alias: {
-      ".prisma/client/index-browser": prismaClientIndexBrowser,
-      // Use lottie_light version to avoid eval warnings
-      "lottie-web": "lottie-web/build/player/lottie_light.js",
+    resolve: {
+      alias: {
+        ".prisma/client/index-browser": prismaClientIndexBrowser,
+        // Use lottie_light version to avoid eval warnings
+        "lottie-web": "lottie-web/build/player/lottie_light.js",
+      },
     },
-  },
-  plugins: [
-    cjsInterop({
-      // List of CJS dependencies that require interop
-      dependencies: ["react-microsoft-clarity", "@markdoc/markdoc"],
-    }),
-    reactRouterHonoServer({
-      serverEntryPoint: "./server/index.ts",
-    }),
-    reactRouter(),
-    tsconfigPaths(),
-  ],
+    plugins: [
+      !isVercel &&
+        reactRouterHonoServer({
+          serverEntryPoint: "./server/index.ts",
+        }),
+      cjsInterop({
+        // List of CJS dependencies that require interop
+        dependencies: ["react-microsoft-clarity", "@markdoc/markdoc"],
+      }),
+      reactRouter(),
+      tsconfigPaths(),
+    ],
+  };
 });
